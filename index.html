@@ -660,7 +660,7 @@ function wireSubmit(){
     try {
       const resp = await fetch(CONFIG.WEBHOOK_URL, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "text/plain;charset=UTF-8" },
         body: JSON.stringify(payload)
       });
       if(!resp.ok) throw new Error("HTTP " + resp.status);
