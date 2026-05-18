@@ -1,0 +1,982 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>DM Store Visit Guide</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+/* =========================================================================
+   THEME — edit these to rebrand quickly
+   ========================================================================= */
+:root{
+  --brand:#0F1F46;          /* deep navy */
+  --brand-2:#1D4ED8;        /* action blue */
+  --accent:#22C55E;         /* success green */
+  --warn:#F59E0B;
+  --error:#DC2626;
+  --bg:#F4F6FB;
+  --card:#FFFFFF;
+  --border:#E2E8F0;
+  --text:#0F172A;
+  --muted:#64748B;
+  --inp-bg:#FFFFFF;
+  --inp-border:#CBD5E1;
+  --section-bg:#F8FAFC;
+  --radius:12px;
+  --shadow:0 1px 2px rgba(15,23,42,.04), 0 8px 24px rgba(15,23,42,.06);
+}
+
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{background:var(--bg);color:var(--text);font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+body{padding:16px 12px 80px}
+
+.wrap{max-width:760px;margin:0 auto}
+
+/* HEADER */
+.hdr{background:linear-gradient(135deg,var(--brand) 0%,#1E3A8A 100%);color:#fff;border-radius:var(--radius);padding:22px 22px 26px;margin-bottom:18px;box-shadow:var(--shadow);text-align:center}
+.hdr h1{font-size:22px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
+.hdr p{margin-top:6px;font-size:13px;opacity:.85}
+.hdr .sub{margin-top:10px;font-size:12px;opacity:.7;font-weight:500}
+
+/* FORM */
+form{display:flex;flex-direction:column;gap:14px}
+
+.section{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden;transition:box-shadow .2s, border-color .2s}
+.section.open{box-shadow:0 1px 2px rgba(15,23,42,.04), 0 14px 36px rgba(15,23,42,.10);border-color:#CBD5E1}
+.section.invalid-section{border-color:#FCA5A5;box-shadow:0 0 0 3px rgba(220,38,38,.08), 0 1px 2px rgba(15,23,42,.04)}
+
+.section-title{display:flex;align-items:center;gap:10px;width:100%;padding:16px 18px;font-size:13px;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:.06em;background:transparent;border:none;text-align:left;font-family:inherit;cursor:pointer;user-select:none;transition:background .15s;-webkit-tap-highlight-color:transparent}
+.section-title:hover{background:var(--section-bg)}
+.section-title:focus-visible{outline:2px solid var(--brand-2);outline-offset:-2px}
+.section.open .section-title{border-bottom:1px solid var(--border)}
+.section-title .num{display:inline-flex;align-items:center;justify-content:center;width:24px;height:24px;border-radius:50%;background:var(--brand);color:#fff;font-size:11px;font-weight:700;flex-shrink:0;transition:background .2s}
+.section.invalid-section .section-title .num{background:var(--error)}
+.section-title .label{flex:1}
+.section-title .chevron{width:18px;height:18px;color:var(--muted);transition:transform .25s ease, color .2s;flex-shrink:0}
+.section.open .section-title .chevron{transform:rotate(180deg);color:var(--brand-2)}
+
+.section-body{display:grid;grid-template-rows:0fr;transition:grid-template-rows .3s ease}
+.section.open .section-body{grid-template-rows:1fr}
+.section-body-inner{overflow:hidden;min-height:0}
+.section-body-pad{padding:18px}
+
+.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field:last-child{margin-bottom:0}
+
+label{font-size:14px;font-weight:600;color:var(--text);line-height:1.35}
+label .req{color:var(--error);font-weight:700;margin-left:2px}
+.help{font-size:12.5px;color:var(--muted);line-height:1.45;margin-top:-2px}
+.help a{color:var(--brand-2);text-decoration:none;font-weight:600;word-break:break-word}
+.help a:hover{text-decoration:underline}
+
+input[type="text"],input[type="email"],input[type="number"],input[type="date"],select,textarea{
+  width:100%;font:inherit;color:var(--text);background:var(--inp-bg);
+  border:1.5px solid var(--inp-border);border-radius:10px;
+  padding:11px 13px;font-size:16px;outline:none;
+  transition:border-color .15s, box-shadow .15s;
+  -webkit-appearance:none;appearance:none;
+}
+select{background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='20' height='20' viewBox='0 0 24 24' fill='%2364748B'><path d='M7 10l5 5 5-5z'/></svg>");background-repeat:no-repeat;background-position:right 10px center;padding-right:38px}
+textarea{min-height:96px;resize:vertical;font-family:inherit}
+input:focus,select:focus,textarea:focus{border-color:var(--brand-2);box-shadow:0 0 0 3px rgba(29,78,216,.15)}
+input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shadow:0 0 0 3px rgba(220,38,38,.15)}
+
+/* Yes/No buttons */
+.yesno{display:flex;gap:10px}
+.yesno label{flex:1;cursor:pointer;display:block}
+.yesno input{position:absolute;opacity:0;pointer-events:none}
+.yesno .pill{display:flex;align-items:center;justify-content:center;padding:13px 10px;font-size:15px;font-weight:600;color:var(--muted);background:var(--card);border:1.5px solid var(--inp-border);border-radius:10px;transition:all .15s;text-align:center}
+.yesno input:checked + .pill{color:#fff;border-color:var(--brand-2)}
+.yesno input[value="Yes"]:checked + .pill{background:var(--accent);border-color:var(--accent)}
+.yesno input[value="No"]:checked + .pill{background:var(--error);border-color:var(--error)}
+.yesno input:focus-visible + .pill{box-shadow:0 0 0 3px rgba(29,78,216,.2)}
+
+/* File uploader */
+.uploader{border:2px dashed var(--inp-border);border-radius:10px;background:var(--section-bg);padding:18px 14px;text-align:center;cursor:pointer;transition:all .15s;position:relative}
+.uploader:hover,.uploader.drag{border-color:var(--brand-2);background:#EEF4FF}
+.uploader input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.uploader-text{font-size:14px;font-weight:600;color:var(--brand-2)}
+.uploader-sub{font-size:12px;color:var(--muted);margin-top:4px}
+.thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:10px}
+.thumb{position:relative;border-radius:8px;overflow:hidden;background:#000;aspect-ratio:1;border:1px solid var(--border)}
+.thumb img{width:100%;height:100%;object-fit:cover;display:block}
+.thumb .x{position:absolute;top:4px;right:4px;width:22px;height:22px;border-radius:50%;background:rgba(0,0,0,.65);color:#fff;border:none;font-size:14px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.thumb .x:hover{background:var(--error)}
+
+/* Store info preview (visible to DM after pick) */
+.store-info{margin-top:8px;padding:10px 12px;background:#EEF4FF;border:1px solid #BFDBFE;border-radius:8px;font-size:13px;color:#1E3A8A;display:none}
+.store-info.show{display:block}
+.store-info b{font-weight:600}
+
+/* Submit area */
+.submit-wrap{margin-top:6px}
+.submit-btn{width:100%;font:inherit;font-size:16px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--brand-2),#2563EB);border:none;border-radius:12px;padding:16px;cursor:pointer;box-shadow:0 6px 16px rgba(29,78,216,.25);transition:all .15s;letter-spacing:.02em}
+.submit-btn:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 10px 20px rgba(29,78,216,.3)}
+.submit-btn:disabled{background:#94A3B8;box-shadow:none;cursor:not-allowed}
+
+.status{margin-top:12px;padding:12px 14px;border-radius:10px;font-size:14px;font-weight:500;display:none}
+.status.show{display:block}
+.status.info{background:#EFF6FF;color:#1E40AF;border:1px solid #BFDBFE}
+.status.success{background:#ECFDF5;color:#065F46;border:1px solid #A7F3D0}
+.status.error{background:#FEF2F2;color:#991B1B;border:1px solid #FECACA}
+
+.spinner{display:inline-block;width:14px;height:14px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .8s linear infinite;vertical-align:-2px;margin-right:6px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Footer */
+.foot{text-align:center;color:var(--muted);font-size:11px;margin-top:18px}
+
+/* Slightly tighter for very small screens */
+@media (max-width: 380px){
+  body{padding:10px 8px 60px}
+  .section{padding:16px 14px}
+  .hdr{padding:18px 16px 22px}
+  .hdr h1{font-size:19px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="hdr">
+    <h1>DM Store Visit Guide</h1>
+    <p>Please fill this out daily as you visit your stores.</p>
+    <div class="sub" id="storeCountSub">Loading store directory…</div>
+  </header>
+
+  <form id="visitForm" novalidate>
+
+    <!-- ====================================================================
+         SECTION 1 — Visit Info
+         ==================================================================== -->
+    <div class="section">
+      <div class="section-title"><span class="num">1</span> Visit Info</div>
+
+      <div class="field">
+        <label for="store">Store <span class="req">*</span></label>
+        <select id="store" name="store" required>
+          <option value="">Loading stores…</option>
+        </select>
+        <div class="store-info" id="storeInfo"></div>
+      </div>
+
+      <!-- Visit date captured silently — set on load to today, sent in payload -->
+      <input type="hidden" id="visitDate" name="visitDate">
+    </div>
+
+    <!-- ====================================================================
+         SECTION 2 — Store Presentation
+         ==================================================================== -->
+    <div class="section">
+      <div class="section-title"><span class="num">2</span> Store Presentation</div>
+
+      <div class="field">
+        <label>Is your store compliant with resets according to the planogram? <span class="req">*</span></label>
+        <div class="help">View the XVIP planogram: <a href="https://xvip.merchandising.cloud/magellan/locations" target="_blank" rel="noopener">xvip.merchandising.cloud</a></div>
+        <div class="yesno" data-required>
+          <label><input type="radio" name="planogramCompliant" value="Yes" required><span class="pill">Yes</span></label>
+          <label><input type="radio" name="planogramCompliant" value="No"><span class="pill">No</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Photo of your store's mobile tables <span class="req">*</span></label>
+        <div class="help">All mobiles powered on, in demo mode, plugged in, on wifi. Price tags neat and showing current promos. Tables clean.</div>
+        <div class="uploader" data-target="mobileTables">
+          <input type="file" accept="image/*" multiple capture="environment" data-required>
+          <div class="uploader-text">📷 Tap to take or upload photos</div>
+          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+        </div>
+        <div class="thumbs" data-thumbs="mobileTables"></div>
+      </div>
+
+      <div class="field">
+        <label>Photos of the store's accessory walls <span class="req">*</span></label>
+        <div class="help">Neat, organized to planogram, labeled with correct price tags.</div>
+        <div class="uploader" data-target="accessoryWalls">
+          <input type="file" accept="image/*" multiple capture="environment" data-required>
+          <div class="uploader-text">📷 Tap to take or upload photos</div>
+          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+        </div>
+        <div class="thumbs" data-thumbs="accessoryWalls"></div>
+      </div>
+
+      <div class="field">
+        <label>Photo of TV (correct screen) or back-of-store whiteboard <span class="req">*</span></label>
+        <div class="help">Should be updated daily.</div>
+        <div class="uploader" data-target="tvWhiteboard">
+          <input type="file" accept="image/*" multiple capture="environment" data-required>
+          <div class="uploader-text">📷 Tap to take or upload photos</div>
+          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+        </div>
+        <div class="thumbs" data-thumbs="tvWhiteboard"></div>
+      </div>
+
+      <div class="field">
+        <label>Photo of Return Bucket & Upgrade Bucket inside the safe <span class="req">*</span></label>
+        <div class="help">Returns/upgrades should be shipped out. Safe should be organized. ZERO mystery phones. If phones should be shipped, help the manager ship them.</div>
+        <div class="uploader" data-target="safeBuckets">
+          <input type="file" accept="image/*" multiple capture="environment" data-required>
+          <div class="uploader-text">📷 Tap to take or upload photos</div>
+          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+        </div>
+        <div class="thumbs" data-thumbs="safeBuckets"></div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION 3 — Cleanliness
+         ==================================================================== -->
+    <div class="section">
+      <div class="section-title"><span class="num">3</span> Cleanliness</div>
+
+      <div class="field">
+        <div class="help" style="margin-top:0">
+          If there are any opportunities, please coach the store manager. The store should look brand new — no dust, debris, or trash. Cleanliness is a direct reflection of you and your management team. All employees should have uniforms and name tags. If you need uniforms, fill out the <a href="https://netorgft3272928-my.sharepoint.com/:x:/g/personal/spulukuri_blufoxmobile_com/EfI2B7KBtyJGmskaBKaQ-dwBFnSHNhPVMa65_c5RO3R8cA?e=8AP95r" target="_blank" rel="noopener">SHIRT ORDER FORM</a> then send a screenshot to Jeff and Del.
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="cleanlinessDescription">Describe the cleanliness of the store</label>
+        <div class="help">Shelves dusted, floors swept/vacuumed, displays look brand new, sales floor and back-of-house free of trash and clutter. If anything falls below standard, see something — say something.</div>
+        <textarea id="cleanlinessDescription" name="cleanlinessDescription" placeholder="What did you observe?"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Photos of specific cleanliness items to address</label>
+        <div class="help">Goal: have these addressed before your next visit.</div>
+        <div class="uploader" data-target="cleanlinessIssues">
+          <input type="file" accept="image/*" multiple capture="environment">
+          <div class="uploader-text">📷 Tap to take or upload photos (optional)</div>
+          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+        </div>
+        <div class="thumbs" data-thumbs="cleanlinessIssues"></div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION 4 — Team & Uniforms
+         ==================================================================== -->
+    <div class="section">
+      <div class="section-title"><span class="num">4</span> Team & Uniforms</div>
+
+      <div class="field">
+        <label>Are all employees wearing name tags and proper uniforms? <span class="req">*</span></label>
+        <div class="help">No non-Xfinity-approved shirts, hoodies or hats on the sales floor. Order personalized name tags here: <a href="https://www.amazon.com/gp/product/B0FDKCWM8G/" target="_blank" rel="noopener">Amazon Name Tag link</a>.</div>
+        <div class="yesno">
+          <label><input type="radio" name="uniformsCompliant" value="Yes" required><span class="pill">Yes</span></label>
+          <label><input type="radio" name="uniformsCompliant" value="No"><span class="pill">No</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION 5 — NPS
+         ==================================================================== -->
+    <div class="section">
+      <div class="section-title"><span class="num">5</span> NPS</div>
+
+      <div class="field">
+        <label>Is your team delivering a proper NPS pitch to every customer, showing the colored text message? <span class="req">*</span></label>
+        <div class="help">Includes bill pays, box swaps, disconnects, etc.</div>
+        <div class="yesno">
+          <label><input type="radio" name="npsPitch" value="Yes" required><span class="pill">Yes</span></label>
+          <label><input type="radio" name="npsPitch" value="No"><span class="pill">No</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Are your reps using Auth ID Scans and sending SMS Consent to every customer? <span class="req">*</span></label>
+        <div class="yesno">
+          <label><input type="radio" name="authIdSms" value="Yes" required><span class="pill">Yes</span></label>
+          <label><input type="radio" name="authIdSms" value="No"><span class="pill">No</span></label>
+        </div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION 6 — Quote Sheets
+         ==================================================================== -->
+    <div class="section">
+      <div class="section-title"><span class="num">6</span> Quote Sheets</div>
+
+      <div class="field">
+        <label for="quoteSheetTrafficPct">What percentage of the store's traffic has seen a mobile quote sheet this month?</label>
+        <input type="number" id="quoteSheetTrafficPct" name="quoteSheetTrafficPct" min="0" max="100" step="1" inputmode="numeric" placeholder="e.g. 35">
+      </div>
+
+      <div class="field">
+        <label>Are all reps using the Mobile Quote Sheets / T-Sheets properly? <span class="req">*</span></label>
+        <div class="yesno">
+          <label><input type="radio" name="quoteSheetsProperUse" value="Yes" required><span class="pill">Yes</span></label>
+          <label><input type="radio" name="quoteSheetsProperUse" value="No"><span class="pill">No</span></label>
+        </div>
+      </div>
+
+      <div class="field">
+        <label for="quoteSheetFeedback">Feedback on the Mobile Quote Sheet presentation(s) today</label>
+        <textarea id="quoteSheetFeedback" name="quoteSheetFeedback" placeholder="How did they do?"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="strugglingReps">Reps struggling with the Mobile Quote Sheets? If so, who, and what's your plan?</label>
+        <textarea id="strugglingReps" name="strugglingReps" placeholder="Names and your coaching plan"></textarea>
+      </div>
+
+      <div class="field">
+        <label for="promotionsFamiliarity">Are all reps familiar with current promotions? If not, who needs practice and what's your plan?</label>
+        <textarea id="promotionsFamiliarity" name="promotionsFamiliarity"></textarea>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SECTION 7 — Wrap-up
+         ==================================================================== -->
+    <div class="section">
+      <div class="section-title"><span class="num">7</span> Wrap-up</div>
+
+      <div class="field">
+        <label for="positiveFeedback">Positive feedback about your visit <span class="req">*</span></label>
+        <div class="help">Shout out standout employees or behaviors you witnessed.</div>
+        <textarea id="positiveFeedback" name="positiveFeedback" required></textarea>
+      </div>
+
+      <div class="field">
+        <label for="areasOfOpportunity">What areas of opportunity do you see in your store? <span class="req">*</span></label>
+        <div class="help">List any areas that need improvement.</div>
+        <textarea id="areasOfOpportunity" name="areasOfOpportunity" required></textarea>
+      </div>
+
+      <div class="field">
+        <label for="blufoxSupport">What can Blufox do to better support you from a Facilities or Ops perspective?</label>
+        <textarea id="blufoxSupport" name="blufoxSupport"></textarea>
+      </div>
+
+      <div class="field">
+        <label>Photos of facility issues to address</label>
+        <div class="help">If there are facility issues preventing the store from running at 100%, share them here.</div>
+        <div class="uploader" data-target="facilityIssues">
+          <input type="file" accept="image/*" multiple capture="environment">
+          <div class="uploader-text">📷 Tap to take or upload photos (optional)</div>
+          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+        </div>
+        <div class="thumbs" data-thumbs="facilityIssues"></div>
+      </div>
+    </div>
+
+    <!-- ====================================================================
+         SUBMIT
+         ==================================================================== -->
+    <div class="submit-wrap">
+      <button type="submit" class="submit-btn" id="submitBtn">Submit Visit Guide</button>
+      <div class="status" id="status"></div>
+    </div>
+
+  </form>
+
+  <div class="foot">DM Store Visit Guide · v1.4</div>
+</div>
+
+<script>
+/* ===========================================================================
+   CONFIG — edit these to customize behavior
+   =========================================================================== */
+const CONFIG = {
+  // 🔗 PASTE YOUR ZAPIER CATCH-HOOK URL HERE
+  WEBHOOK_URL: "https://hooks.zapier.com/hooks/catch/REPLACE_ME/REPLACE_ME/",
+
+  // Live store directory (raw JSON file from BluFox Mobile)
+  DIRECTORY_URL: "https://raw.githubusercontent.com/blufoxmobile/Daily-Sales-Report/main/data/store-directory.json",
+
+  // Image compression to keep webhook payload manageable
+  IMG_MAX_DIMENSION: 1280,   // px — longest edge after resize
+  IMG_QUALITY:       0.78,   // 0–1 JPEG quality
+
+  // Show the store-manager block to the DM after picking a store? (false = silent background only)
+  SHOW_STORE_INFO_PREVIEW: true,
+};
+
+/* ===========================================================================
+   STATE
+   =========================================================================== */
+const directory = {
+  stores: [],
+  storeManagers: {},     // store -> manager email
+  storeManagerNames: {}, // store -> manager name
+  storeDMs: {}           // store -> DM email
+};
+
+const filesBucket = {
+  mobileTables:      [],
+  accessoryWalls:    [],
+  tvWhiteboard:      [],
+  cleanlinessIssues: [],
+  safeBuckets:       [],
+  facilityIssues:    []
+};
+
+/* ===========================================================================
+   INIT — populate date, load store directory, wire up uploaders
+   =========================================================================== */
+window.addEventListener("DOMContentLoaded", () => {
+  // Default visit date = today
+  const t = new Date();
+  const iso = t.getFullYear() + "-" + String(t.getMonth()+1).padStart(2,"0") + "-" + String(t.getDate()).padStart(2,"0");
+  document.getElementById("visitDate").value = iso;
+
+  makeSectionsCollapsible();
+  loadDirectory();
+  wireUploaders();
+  wireStoreChange();
+  wireSubmit();
+});
+
+/* ---------- COLLAPSIBLE SECTIONS ---------- */
+function makeSectionsCollapsible(){
+  document.querySelectorAll(".section").forEach(section => {
+    const title = section.querySelector(".section-title");
+    if(!title) return;
+
+    // Wrap existing title contents so we can append a chevron alongside them
+    const labelHTML = title.innerHTML;
+    title.innerHTML = `<span class="label">${labelHTML}</span>` +
+      `<svg class="chevron" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M7 10l5 5 5-5z"/></svg>`;
+
+    // Collect everything in the section AFTER the title and move it into a collapsible body
+    const body = document.createElement("div");
+    body.className = "section-body";
+    const inner = document.createElement("div");
+    inner.className = "section-body-inner";
+    const pad = document.createElement("div");
+    pad.className = "section-body-pad";
+    inner.appendChild(pad);
+    body.appendChild(inner);
+
+    let node = title.nextSibling;
+    while(node){
+      const next = node.nextSibling;
+      pad.appendChild(node);
+      node = next;
+    }
+    section.appendChild(body);
+
+    // Accessibility + interaction
+    title.setAttribute("role", "button");
+    title.setAttribute("tabindex", "0");
+    title.setAttribute("aria-expanded", "false");
+    title.addEventListener("click", () => toggleSection(section));
+    title.addEventListener("keydown", (e) => {
+      if(e.key === "Enter" || e.key === " "){ e.preventDefault(); toggleSection(section); }
+    });
+  });
+}
+
+function toggleSection(section){
+  const open = section.classList.toggle("open");
+  const title = section.querySelector(".section-title");
+  if(title) title.setAttribute("aria-expanded", open ? "true" : "false");
+}
+
+function openSection(section){
+  if(section && !section.classList.contains("open")){
+    section.classList.add("open");
+    const title = section.querySelector(".section-title");
+    if(title) title.setAttribute("aria-expanded", "true");
+  }
+}
+
+function closeAllSections(){
+  document.querySelectorAll(".section.open").forEach(s => {
+    s.classList.remove("open");
+    const title = s.querySelector(".section-title");
+    if(title) title.setAttribute("aria-expanded", "false");
+  });
+  document.querySelectorAll(".section.invalid-section").forEach(s => s.classList.remove("invalid-section"));
+}
+
+/* ---------- LOAD DIRECTORY ---------- */
+async function loadDirectory(){
+  const sel = document.getElementById("store");
+  try {
+    const resp = await fetch(CONFIG.DIRECTORY_URL + "?_=" + Date.now(), { cache: "no-store" });
+    if(!resp.ok) throw new Error("HTTP " + resp.status);
+    const json = await resp.json();
+    directory.stores             = Array.isArray(json.stores) ? json.stores.slice() : [];
+    directory.storeManagers      = json.storeManagers     || {};
+    directory.storeManagerNames  = json.storeManagerNames || {};
+    directory.storeDMs           = json.storeDMs          || {};
+
+    directory.stores.sort((a,b)=> a.localeCompare(b));
+
+    sel.innerHTML = '<option value="">Select a store…</option>' +
+      directory.stores.map(s => `<option value="${escapeHTML(s)}">${escapeHTML(s)}</option>`).join("");
+
+    document.getElementById("storeCountSub").textContent =
+      directory.stores.length + " stores loaded · last updated " + (json.updatedAt ? new Date(json.updatedAt).toLocaleDateString() : "—");
+  } catch(err){
+    sel.innerHTML = '<option value="">⚠️ Could not load stores — refresh to retry</option>';
+    document.getElementById("storeCountSub").textContent = "Directory load failed: " + err.message;
+  }
+}
+
+function wireStoreChange(){
+  const sel = document.getElementById("store");
+  const info = document.getElementById("storeInfo");
+  sel.addEventListener("change", () => {
+    const s = sel.value;
+    if(!s){ info.classList.remove("show"); info.innerHTML = ""; return; }
+    if(!CONFIG.SHOW_STORE_INFO_PREVIEW){ info.classList.remove("show"); return; }
+    const mgrName  = directory.storeManagerNames[s] || "—";
+    const mgrEmail = directory.storeManagers[s]     || "—";
+    const dmEmail  = directory.storeDMs[s]          || "—";
+    info.innerHTML = `<b>Store Manager:</b> ${escapeHTML(mgrName)} &lt;${escapeHTML(mgrEmail)}&gt;<br>
+                      <b>District Manager:</b> ${escapeHTML(dmEmail)}`;
+    info.classList.add("show");
+  });
+}
+
+/* ---------- UPLOADER WIRING ---------- */
+function wireUploaders(){
+  document.querySelectorAll(".uploader").forEach(box => {
+    const target = box.dataset.target;
+    const input  = box.querySelector('input[type="file"]');
+    const thumbs = document.querySelector(`[data-thumbs="${target}"]`);
+
+    input.addEventListener("change", async (e) => {
+      const files = Array.from(e.target.files || []);
+      for(const f of files){
+        if(!f.type.startsWith("image/")) continue;
+        try {
+          const compressed = await compressImage(f);
+          filesBucket[target].push(compressed);
+          renderThumb(thumbs, target, compressed);
+        } catch(err){
+          console.error("Compression failed", err);
+        }
+      }
+      // reset input so same file can be re-selected later
+      input.value = "";
+      validateUploader(box);
+    });
+
+    // Drag & drop
+    ["dragenter","dragover"].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.add("drag"); }));
+    ["dragleave","drop"].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.remove("drag"); }));
+    box.addEventListener("drop", async (e) => {
+      const files = Array.from(e.dataTransfer.files || []);
+      for(const f of files){
+        if(!f.type.startsWith("image/")) continue;
+        const compressed = await compressImage(f);
+        filesBucket[target].push(compressed);
+        renderThumb(thumbs, target, compressed);
+      }
+      validateUploader(box);
+    });
+  });
+}
+
+function renderThumb(container, target, fileObj){
+  const wrap = document.createElement("div");
+  wrap.className = "thumb";
+  wrap.innerHTML = `<img src="${fileObj.dataUrl}" alt=""><button type="button" class="x" aria-label="Remove">✕</button>`;
+  wrap.querySelector(".x").addEventListener("click", () => {
+    const idx = filesBucket[target].indexOf(fileObj);
+    if(idx >= 0) filesBucket[target].splice(idx, 1);
+    wrap.remove();
+    const box = document.querySelector(`.uploader[data-target="${target}"]`);
+    validateUploader(box);
+  });
+  container.appendChild(wrap);
+}
+
+function validateUploader(box){
+  const target = box.dataset.target;
+  const input  = box.querySelector('input[type="file"]');
+  if(input.dataset.required !== undefined){
+    if(filesBucket[target].length > 0) box.classList.remove("invalid");
+  }
+}
+
+/* ---------- IMAGE COMPRESSION ---------- */
+function compressImage(file){
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = () => reject(reader.error);
+    reader.onload = () => {
+      const img = new Image();
+      img.onerror = () => reject(new Error("Could not load image"));
+      img.onload = () => {
+        const max = CONFIG.IMG_MAX_DIMENSION;
+        let { width, height } = img;
+        if(width > max || height > max){
+          if(width >= height){ height = Math.round(height * (max/width)); width = max; }
+          else                { width  = Math.round(width  * (max/height)); height = max; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = width; canvas.height = height;
+        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+        const dataUrl = canvas.toDataURL("image/jpeg", CONFIG.IMG_QUALITY);
+        resolve({
+          name:     (file.name || "photo.jpg").replace(/\.\w+$/, "") + ".jpg",
+          mimeType: "image/jpeg",
+          sizeKB:   Math.round((dataUrl.length * 0.75) / 1024),
+          dataUrl
+        });
+      };
+      img.src = reader.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+/* ---------- SUBMIT ---------- */
+function wireSubmit(){
+  const form = document.getElementById("visitForm");
+  form.addEventListener("submit", async (e) => {
+    e.preventDefault();
+    if(!validateForm()) return;
+
+    const btn    = document.getElementById("submitBtn");
+    const status = document.getElementById("status");
+
+    const payload = buildPayload();
+
+    console.log("Submitting payload:", payload);
+
+    if(CONFIG.WEBHOOK_URL.includes("REPLACE_ME")){
+      status.className = "status info show";
+      status.innerHTML = "⚠️ Webhook URL not configured. Payload printed to the browser console (open DevTools to inspect).";
+      return;
+    }
+
+    btn.disabled = true;
+    btn.innerHTML = '<span class="spinner"></span>Submitting…';
+    status.className = "status info show";
+    status.textContent = "Sending your visit guide…";
+
+    try {
+      const resp = await fetch(CONFIG.WEBHOOK_URL, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload)
+      });
+      if(!resp.ok) throw new Error("HTTP " + resp.status);
+      status.className = "status success show";
+      status.innerHTML = "✅ Submitted! Thanks — your visit guide was sent.";
+      btn.textContent = "Submitted ✓";
+      // Optional: auto-reset after a few seconds
+      setTimeout(() => {
+        form.reset();
+        Object.keys(filesBucket).forEach(k => filesBucket[k] = []);
+        document.querySelectorAll(".thumbs").forEach(t => t.innerHTML = "");
+        document.getElementById("storeInfo").classList.remove("show");
+        closeAllSections();
+        btn.disabled = false;
+        btn.textContent = "Submit Visit Guide";
+        status.className = "status";
+        status.textContent = "";
+        const t = new Date();
+        document.getElementById("visitDate").value = t.getFullYear() + "-" + String(t.getMonth()+1).padStart(2,"0") + "-" + String(t.getDate()).padStart(2,"0");
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }, 4000);
+    } catch(err){
+      btn.disabled = false;
+      btn.textContent = "Submit Visit Guide";
+      status.className = "status error show";
+      status.innerHTML = "❌ Submission failed: " + escapeHTML(err.message) + ". Try again, or screenshot this and share with Jeff.";
+    }
+  });
+}
+
+function validateForm(){
+  let ok = true;
+  let firstInvalid = null;
+  const invalidSections = new Set();
+  const flag = (el) => {
+    if(!el) return;
+    if(!firstInvalid) firstInvalid = el;
+    const sec = el.closest ? el.closest(".section") : null;
+    if(sec) invalidSections.add(sec);
+  };
+
+  // Standard inputs marked `required`
+  document.querySelectorAll("input[required], textarea[required], select[required]").forEach(el => {
+    el.classList.remove("invalid");
+    if(el.type === "radio") return; // handled below
+    if(!el.value || !el.value.trim()){
+      el.classList.add("invalid"); ok = false; flag(el);
+    } else if(el.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim())){
+      el.classList.add("invalid"); ok = false; flag(el);
+    }
+  });
+
+  // Required radio groups
+  ["planogramCompliant","uniformsCompliant","npsPitch","quoteSheetsProperUse","authIdSms"].forEach(name => {
+    const group = document.getElementsByName(name);
+    const checked = Array.from(group).some(r => r.checked);
+    const wrapper = group[0]?.closest(".yesno");
+    if(wrapper) wrapper.classList.remove("invalid");
+    if(!checked){
+      ok = false;
+      if(wrapper){
+        wrapper.querySelectorAll(".pill").forEach(p => p.style.borderColor = "var(--error)");
+      }
+      flag(group[0]);
+    } else if(wrapper){
+      wrapper.querySelectorAll(".pill").forEach(p => p.style.borderColor = "");
+    }
+  });
+
+  // Required file uploaders
+  document.querySelectorAll(".uploader").forEach(box => {
+    const input = box.querySelector('input[type="file"]');
+    box.classList.remove("invalid");
+    box.style.borderColor = "";
+    if(input.dataset.required !== undefined){
+      const target = box.dataset.target;
+      if(filesBucket[target].length === 0){
+        box.classList.add("invalid");
+        box.style.borderColor = "var(--error)";
+        ok = false;
+        flag(box);
+      }
+    }
+  });
+
+  // Reset all section-level flags, then re-mark + auto-open invalid ones
+  document.querySelectorAll(".section.invalid-section").forEach(s => s.classList.remove("invalid-section"));
+  invalidSections.forEach(s => { openSection(s); s.classList.add("invalid-section"); });
+
+  const status = document.getElementById("status");
+  if(!ok){
+    status.className = "status error show";
+    status.textContent = "Please complete the highlighted required fields. Tap any flagged section to review.";
+    // Wait for the accordion expansion animation before scrolling
+    if(firstInvalid){
+      setTimeout(() => firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" }), 320);
+    }
+  } else {
+    status.className = "status";
+    status.textContent = "";
+  }
+  return ok;
+}
+
+function buildPayload(){
+  const f = document.getElementById("visitForm");
+  const fd = new FormData(f);
+  const store = fd.get("store") || "";
+  const storeManagerEmail = directory.storeManagers[store]     || "";
+  const storeManagerName  = directory.storeManagerNames[store] || "";
+  const storeDMEmail      = directory.storeDMs[store]          || "";
+
+  const photoSummary = {};
+  Object.keys(filesBucket).forEach(k => {
+    photoSummary[k] = filesBucket[k].map(f => ({ name: f.name, mimeType: f.mimeType, sizeKB: f.sizeKB, dataUrl: f.dataUrl }));
+  });
+
+  const payload = {
+    submittedAt: new Date().toISOString(),
+    formVersion: "1.4",
+
+    // ----- routing fields (auto-populated from store directory; used by Zapier email step) -----
+    store:             store,
+    storeManagerName:  storeManagerName,
+    storeManagerEmail: storeManagerEmail,
+    storeDMEmail:      storeDMEmail,
+
+    // ----- visit info (auto-set to today) -----
+    visitDate: fd.get("visitDate") || "",
+
+    // ----- presentation -----
+    planogramCompliant: fd.get("planogramCompliant") || "",
+
+    // ----- cleanliness -----
+    cleanlinessDescription: (fd.get("cleanlinessDescription") || "").trim(),
+
+    // ----- team & uniforms -----
+    uniformsCompliant: fd.get("uniformsCompliant") || "",
+
+    // ----- NPS -----
+    npsPitch:  fd.get("npsPitch")  || "",
+    authIdSms: fd.get("authIdSms") || "",
+
+    // ----- quote sheets -----
+    quoteSheetTrafficPct:   (fd.get("quoteSheetTrafficPct") || "").trim(),
+    quoteSheetsProperUse:   fd.get("quoteSheetsProperUse") || "",
+    quoteSheetFeedback:     (fd.get("quoteSheetFeedback") || "").trim(),
+    strugglingReps:         (fd.get("strugglingReps") || "").trim(),
+    promotionsFamiliarity:  (fd.get("promotionsFamiliarity") || "").trim(),
+
+    // ----- wrap-up -----
+    positiveFeedback:    (fd.get("positiveFeedback") || "").trim(),
+    areasOfOpportunity:  (fd.get("areasOfOpportunity") || "").trim(),
+    blufoxSupport:       (fd.get("blufoxSupport") || "").trim(),
+
+    // ----- photos as base64 data URLs grouped by section -----
+    photos: photoSummary,
+
+    // Helpful counts for spreadsheet trackers
+    photoCounts: Object.fromEntries(Object.entries(filesBucket).map(([k,v]) => [k, v.length]))
+  };
+
+  // Rendered HTML email body — plug into your Zapier email step as {{emailHtml}}
+  payload.emailHtml = buildEmailHtml(payload);
+
+  return payload;
+}
+
+/* ===========================================================================
+   EMAIL HTML — pre-rendered email body shipped in the payload as `emailHtml`.
+   In Zapier, set the email step's HTML Body to {{emailHtml}}.
+   =========================================================================== */
+function buildEmailHtml(p){
+  const esc = (s) => String(s == null ? "" : s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+
+  const yn = (v) => {
+    if(v === "Yes") return '<span style="display:inline-block;padding:5px 12px;background:#16a34a;color:#ffffff;border-radius:14px;font-weight:700;font-size:11px;font-family:Helvetica,Arial,sans-serif;letter-spacing:.06em">YES</span>';
+    if(v === "No")  return '<span style="display:inline-block;padding:5px 12px;background:#dc2626;color:#ffffff;border-radius:14px;font-weight:700;font-size:11px;font-family:Helvetica,Arial,sans-serif;letter-spacing:.06em">NO</span>';
+    return '<span style="display:inline-block;padding:5px 12px;background:#94a3b8;color:#ffffff;border-radius:14px;font-weight:700;font-size:11px;font-family:Helvetica,Arial,sans-serif">—</span>';
+  };
+
+  const text = (v) => {
+    if(!v || !String(v).trim()) return '<div style="color:#94a3b8;font-style:italic;font-size:13px;font-family:Helvetica,Arial,sans-serif">No notes provided.</div>';
+    return '<div style="color:#1e293b;font-size:14px;line-height:1.55;background:#f8fafc;border-left:3px solid #1D4ED8;padding:10px 14px;border-radius:0 8px 8px 0;font-family:Helvetica,Arial,sans-serif;white-space:pre-wrap">' + esc(v) + '</div>';
+  };
+
+  const qa = (label, valueHtml) =>
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-bottom:14px"><tr><td style="vertical-align:top">' +
+    '<div style="font-size:11px;color:#475569;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:6px;font-family:Helvetica,Arial,sans-serif">' + esc(label) + '</div>' +
+    valueHtml + '</td></tr></table>';
+
+  const photoGrid = (photos, alt) => {
+    if(!photos || !photos.length) return "";
+    const cells = photos.map(ph =>
+      '<td width="50%" style="padding:4px;vertical-align:top">' +
+      '<img src="' + ph.dataUrl + '" alt="' + esc(alt) + '" style="width:100%;max-width:262px;height:auto;display:block;border-radius:8px;border:1px solid #e2e8f0">' +
+      '</td>');
+    const rows = [];
+    for(let i = 0; i < cells.length; i += 2){
+      rows.push("<tr>" + cells[i] + (cells[i+1] || '<td width="50%" style="padding:4px"></td>') + "</tr>");
+    }
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px;margin-bottom:4px">' + rows.join("") + "</table>";
+  };
+
+  const sectionHeader = (n, title) =>
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin:26px 0 14px"><tr>' +
+    '<td style="border-bottom:2px solid #0F1F46;padding-bottom:8px">' +
+    '<span style="display:inline-block;width:24px;height:24px;line-height:24px;text-align:center;background:#0F1F46;color:#ffffff;border-radius:50%;font-size:11px;font-weight:700;font-family:Helvetica,Arial,sans-serif;margin-right:10px;vertical-align:middle">' + n + '</span>' +
+    '<span style="font-size:14px;color:#0F1F46;text-transform:uppercase;letter-spacing:.06em;font-weight:700;font-family:Helvetica,Arial,sans-serif;vertical-align:middle">' + esc(title) + '</span>' +
+    '</td></tr></table>';
+
+  // Pretty visit date — "May 18, 2026"
+  let prettyDate = p.visitDate || "";
+  try {
+    const d = new Date((p.visitDate || "") + "T00:00:00");
+    if(!isNaN(d.valueOf())){
+      const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
+      prettyDate = months[d.getMonth()] + " " + d.getDate() + ", " + d.getFullYear();
+    }
+  } catch(_){}
+
+  // Pretty submitted timestamp
+  let prettySubmitted = p.submittedAt;
+  try { prettySubmitted = new Date(p.submittedAt).toLocaleString("en-US", { dateStyle: "medium", timeStyle: "short" }); } catch(_){}
+
+  const ph = p.photos || {};
+  const has = (k) => ph[k] && ph[k].length > 0;
+
+  return (
+'<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DM Visit Guide — ' + esc(p.store) + '</title></head>' +
+'<body style="margin:0;padding:0;background:#f4f6fb;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%">' +
+'<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="background:#f4f6fb;padding:20px 0"><tr><td align="center">' +
+'<table role="presentation" width="600" cellpadding="0" cellspacing="0" border="0" style="max-width:600px;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e2e8f0">' +
+
+  // HEADER
+  '<tr><td style="background:#0F1F46;background-image:linear-gradient(135deg,#0F1F46 0%,#1E3A8A 100%);padding:28px 28px 24px;color:#ffffff;text-align:center">' +
+    '<div style="font-size:11px;letter-spacing:.18em;text-transform:uppercase;opacity:.65;font-weight:600">DM Store Visit Guide</div>' +
+    '<div style="font-size:26px;font-weight:700;line-height:1.25;margin:10px 0 6px">' + esc(p.store) + '</div>' +
+    '<div style="font-size:14px;opacity:.85">' + esc(prettyDate) + '</div>' +
+  '</td></tr>' +
+
+  // ROUTING
+  '<tr><td style="background:#eef4ff;padding:14px 28px;border-bottom:1px solid #dbeafe">' +
+    '<div style="font-size:12px;color:#1e3a8a;line-height:1.55;font-family:Helvetica,Arial,sans-serif">' +
+      '<strong style="color:#0F1F46">Store Manager:</strong> ' + esc(p.storeManagerName || "—") + ' &lt;' + esc(p.storeManagerEmail || "—") + '&gt;<br>' +
+      '<strong style="color:#0F1F46">District Manager:</strong> ' + esc(p.storeDMEmail || "—") +
+    '</div>' +
+  '</td></tr>' +
+
+  // AT A GLANCE
+  '<tr><td style="padding:22px 28px 0">' +
+    '<div style="font-size:11px;color:#64748b;text-transform:uppercase;letter-spacing:.08em;font-weight:700;margin-bottom:12px;text-align:center">At a glance</div>' +
+    '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+      '<td align="center" style="padding:4px">' + yn(p.planogramCompliant)   + '<div style="font-size:10px;color:#64748b;margin-top:6px;letter-spacing:.04em">Planogram</div></td>' +
+      '<td align="center" style="padding:4px">' + yn(p.uniformsCompliant)    + '<div style="font-size:10px;color:#64748b;margin-top:6px;letter-spacing:.04em">Uniforms</div></td>' +
+      '<td align="center" style="padding:4px">' + yn(p.npsPitch)             + '<div style="font-size:10px;color:#64748b;margin-top:6px;letter-spacing:.04em">NPS Pitch</div></td>' +
+      '<td align="center" style="padding:4px">' + yn(p.authIdSms)            + '<div style="font-size:10px;color:#64748b;margin-top:6px;letter-spacing:.04em">Auth ID/SMS</div></td>' +
+      '<td align="center" style="padding:4px">' + yn(p.quoteSheetsProperUse) + '<div style="font-size:10px;color:#64748b;margin-top:6px;letter-spacing:.04em">Quote Sheets</div></td>' +
+    '</tr></table>' +
+  '</td></tr>' +
+
+  // BODY
+  '<tr><td style="padding:0 28px 24px">' +
+    sectionHeader(2, "Store Presentation") +
+    qa("Planogram compliant?", yn(p.planogramCompliant)) +
+    (has("mobileTables")   ? qa("Mobile Tables ("    + ph.mobileTables.length   + ")", photoGrid(ph.mobileTables,   "Mobile tables"))   : "") +
+    (has("accessoryWalls") ? qa("Accessory Walls ("  + ph.accessoryWalls.length + ")", photoGrid(ph.accessoryWalls, "Accessory walls")) : "") +
+    (has("tvWhiteboard")   ? qa("TV / Whiteboard ("  + ph.tvWhiteboard.length   + ")", photoGrid(ph.tvWhiteboard,   "TV or whiteboard"))   : "") +
+    (has("safeBuckets")    ? qa("Return & Upgrade Buckets (" + ph.safeBuckets.length + ")", photoGrid(ph.safeBuckets, "Safe buckets")) : "") +
+
+    sectionHeader(3, "Cleanliness") +
+    qa("Cleanliness notes", text(p.cleanlinessDescription)) +
+    (has("cleanlinessIssues") ? qa("Cleanliness Issue Photos (" + ph.cleanlinessIssues.length + ")", photoGrid(ph.cleanlinessIssues, "Cleanliness issues")) : "") +
+
+    sectionHeader(4, "Team & Uniforms") +
+    qa("Name tags & uniforms compliant?", yn(p.uniformsCompliant)) +
+
+    sectionHeader(5, "NPS") +
+    qa("Proper NPS pitch with colored text?", yn(p.npsPitch)) +
+    qa("Auth ID Scans & SMS Consent?", yn(p.authIdSms)) +
+
+    sectionHeader(6, "Quote Sheets") +
+    qa("% of traffic that has seen a mobile quote sheet this month",
+       '<div style="font-size:28px;font-weight:700;color:#0F1F46;font-family:Helvetica,Arial,sans-serif;line-height:1.2">' +
+         (p.quoteSheetTrafficPct ? esc(p.quoteSheetTrafficPct) + '<span style="font-size:18px;color:#64748b;font-weight:500"> %</span>'
+                                 : '<span style="font-size:14px;color:#94a3b8;font-style:italic;font-weight:400">— Not entered —</span>') +
+       '</div>') +
+    qa("All reps using quote sheets properly?", yn(p.quoteSheetsProperUse)) +
+    qa("Today's presentation feedback", text(p.quoteSheetFeedback)) +
+    qa("Reps struggling with quote sheets", text(p.strugglingReps)) +
+    qa("Promotions familiarity & plan", text(p.promotionsFamiliarity)) +
+
+    sectionHeader(7, "Wrap-up") +
+    qa("Positive feedback", text(p.positiveFeedback)) +
+    qa("Areas of opportunity", text(p.areasOfOpportunity)) +
+    qa("How Blufox can better support this store", text(p.blufoxSupport)) +
+    (has("facilityIssues") ? qa("Facility Issue Photos (" + ph.facilityIssues.length + ")", photoGrid(ph.facilityIssues, "Facility issues")) : "") +
+  '</td></tr>' +
+
+  // FOOTER
+  '<tr><td style="background:#f8fafc;padding:14px 28px;text-align:center;border-top:1px solid #e2e8f0">' +
+    '<div style="font-size:11px;color:#64748b;font-family:Helvetica,Arial,sans-serif;line-height:1.55">' +
+      'Submitted ' + esc(prettySubmitted) + '<br>' +
+      'DM Store Visit Guide · v' + esc(p.formVersion) +
+    '</div>' +
+  '</td></tr>' +
+
+'</table></td></tr></table></body></html>');
+}
+
+/* ---------- utils ---------- */
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g, c => ({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  }[c]));
+}
+</script>
+</body>
+</html>
