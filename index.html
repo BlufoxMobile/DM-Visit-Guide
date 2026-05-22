@@ -167,8 +167,8 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
       <div class="section-title"><span class="num">1</span> Visit Info</div>
 
       <div class="field">
-        <label for="store">Store <span class="req">*</span></label>
-        <select id="store" name="store" required>
+        <label for="store">Store</label>
+        <select id="store" name="store">
           <option value="">Loading stores…</option>
         </select>
         <div class="store-info" id="storeInfo"></div>
@@ -185,19 +185,30 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
       <div class="section-title"><span class="num">2</span> Store Presentation</div>
 
       <div class="field">
-        <label>Is your store compliant with resets according to the planogram? <span class="req">*</span></label>
+        <label>Is your store compliant with resets according to the planogram?</label>
         <div class="help">View the XVIP planogram: <a href="https://xvip.merchandising.cloud/magellan/locations" target="_blank" rel="noopener">xvip.merchandising.cloud</a></div>
-        <div class="yesno" data-required>
-          <label><input type="radio" name="planogramCompliant" value="Yes" required><span class="pill">Yes</span></label>
+        <div class="yesno">
+          <label><input type="radio" name="planogramCompliant" value="Yes"><span class="pill">Yes</span></label>
           <label><input type="radio" name="planogramCompliant" value="No"><span class="pill">No</span></label>
         </div>
       </div>
 
       <div class="field">
-        <label>Photo of your store's mobile tables <span class="req">*</span></label>
+        <label>Upload a picture or screenshot of the XVIP for the store you are visiting</label>
+        <div class="help">Capture the current planogram view from XVIP so we can compare against the store on the floor.</div>
+        <div class="uploader" data-target="planogramPhoto">
+          <input type="file" accept="image/*" multiple capture="environment">
+          <div class="uploader-text">📷 Tap to take or upload photos</div>
+          <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
+        </div>
+        <div class="thumbs" data-thumbs="planogramPhoto"></div>
+      </div>
+
+      <div class="field">
+        <label>Photo of your store's mobile tables</label>
         <div class="help">All mobiles powered on, in demo mode, plugged in, on wifi. Price tags neat and showing current promos. Tables clean.</div>
         <div class="uploader" data-target="mobileTables">
-          <input type="file" accept="image/*" multiple capture="environment" data-required>
+          <input type="file" accept="image/*" multiple capture="environment">
           <div class="uploader-text">📷 Tap to take or upload photos</div>
           <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
@@ -205,10 +216,10 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
       </div>
 
       <div class="field">
-        <label>Photos of the store's accessory walls <span class="req">*</span></label>
+        <label>Photos of the store's accessory walls</label>
         <div class="help">Neat, organized to planogram, labeled with correct price tags.</div>
         <div class="uploader" data-target="accessoryWalls">
-          <input type="file" accept="image/*" multiple capture="environment" data-required>
+          <input type="file" accept="image/*" multiple capture="environment">
           <div class="uploader-text">📷 Tap to take or upload photos</div>
           <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
@@ -216,10 +227,10 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
       </div>
 
       <div class="field">
-        <label>Photo of TV (correct screen) or back-of-store whiteboard <span class="req">*</span></label>
+        <label>Photo of TV (correct screen) or back-of-store whiteboard</label>
         <div class="help">Should be updated daily.</div>
         <div class="uploader" data-target="tvWhiteboard">
-          <input type="file" accept="image/*" multiple capture="environment" data-required>
+          <input type="file" accept="image/*" multiple capture="environment">
           <div class="uploader-text">📷 Tap to take or upload photos</div>
           <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
@@ -227,10 +238,10 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
       </div>
 
       <div class="field">
-        <label>Photo of Return Bucket & Upgrade Bucket inside the safe <span class="req">*</span></label>
+        <label>Photo of Return Bucket & Upgrade Bucket inside the safe</label>
         <div class="help">Returns/upgrades should be shipped out. Safe should be organized. ZERO mystery phones. If phones should be shipped, help the manager ship them.</div>
         <div class="uploader" data-target="safeBuckets">
-          <input type="file" accept="image/*" multiple capture="environment" data-required>
+          <input type="file" accept="image/*" multiple capture="environment">
           <div class="uploader-text">📷 Tap to take or upload photos</div>
           <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
@@ -261,7 +272,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
         <div class="help">Goal: have these addressed before your next visit.</div>
         <div class="uploader" data-target="cleanlinessIssues">
           <input type="file" accept="image/*" multiple capture="environment">
-          <div class="uploader-text">📷 Tap to take or upload photos (optional)</div>
+          <div class="uploader-text">📷 Tap to take or upload photos</div>
           <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
         <div class="thumbs" data-thumbs="cleanlinessIssues"></div>
@@ -275,10 +286,10 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
       <div class="section-title"><span class="num">4</span> Team & Uniforms</div>
 
       <div class="field">
-        <label>Are all employees wearing name tags and proper uniforms? <span class="req">*</span></label>
+        <label>Are all employees wearing name tags and proper uniforms?</label>
         <div class="help">No non-Xfinity-approved shirts, hoodies or hats on the sales floor. Order personalized name tags here: <a href="https://www.amazon.com/gp/product/B0FDKCWM8G/" target="_blank" rel="noopener">Amazon Name Tag link</a>.</div>
         <div class="yesno">
-          <label><input type="radio" name="uniformsCompliant" value="Yes" required><span class="pill">Yes</span></label>
+          <label><input type="radio" name="uniformsCompliant" value="Yes"><span class="pill">Yes</span></label>
           <label><input type="radio" name="uniformsCompliant" value="No"><span class="pill">No</span></label>
         </div>
       </div>
@@ -291,18 +302,18 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
       <div class="section-title"><span class="num">5</span> NPS</div>
 
       <div class="field">
-        <label>Is your team delivering a proper NPS pitch to every customer, showing the colored text message? <span class="req">*</span></label>
+        <label>Is your team delivering a proper NPS pitch to every customer, showing the colored text message?</label>
         <div class="help">Includes bill pays, box swaps, disconnects, etc.</div>
         <div class="yesno">
-          <label><input type="radio" name="npsPitch" value="Yes" required><span class="pill">Yes</span></label>
+          <label><input type="radio" name="npsPitch" value="Yes"><span class="pill">Yes</span></label>
           <label><input type="radio" name="npsPitch" value="No"><span class="pill">No</span></label>
         </div>
       </div>
 
       <div class="field">
-        <label>Are your reps using Auth ID Scans and sending SMS Consent to every customer? <span class="req">*</span></label>
+        <label>Are your reps using Auth ID Scans and sending SMS Consent to every customer?</label>
         <div class="yesno">
-          <label><input type="radio" name="authIdSms" value="Yes" required><span class="pill">Yes</span></label>
+          <label><input type="radio" name="authIdSms" value="Yes"><span class="pill">Yes</span></label>
           <label><input type="radio" name="authIdSms" value="No"><span class="pill">No</span></label>
         </div>
       </div>
@@ -320,9 +331,9 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
       </div>
 
       <div class="field">
-        <label>Are all reps using the Mobile Quote Sheets / T-Sheets properly? <span class="req">*</span></label>
+        <label>Are all reps using the Mobile Quote Sheets / T-Sheets properly?</label>
         <div class="yesno">
-          <label><input type="radio" name="quoteSheetsProperUse" value="Yes" required><span class="pill">Yes</span></label>
+          <label><input type="radio" name="quoteSheetsProperUse" value="Yes"><span class="pill">Yes</span></label>
           <label><input type="radio" name="quoteSheetsProperUse" value="No"><span class="pill">No</span></label>
         </div>
       </div>
@@ -350,15 +361,15 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
       <div class="section-title"><span class="num">7</span> Wrap-up</div>
 
       <div class="field">
-        <label for="positiveFeedback">Positive feedback about your visit <span class="req">*</span></label>
+        <label for="positiveFeedback">Positive feedback about your visit</label>
         <div class="help">Shout out standout employees or behaviors you witnessed.</div>
-        <textarea id="positiveFeedback" name="positiveFeedback" required></textarea>
+        <textarea id="positiveFeedback" name="positiveFeedback"></textarea>
       </div>
 
       <div class="field">
-        <label for="areasOfOpportunity">What areas of opportunity do you see in your store? <span class="req">*</span></label>
+        <label for="areasOfOpportunity">What areas of opportunity do you see in your store?</label>
         <div class="help">List any areas that need improvement.</div>
-        <textarea id="areasOfOpportunity" name="areasOfOpportunity" required></textarea>
+        <textarea id="areasOfOpportunity" name="areasOfOpportunity"></textarea>
       </div>
 
       <div class="field">
@@ -371,7 +382,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
         <div class="help">If there are facility issues preventing the store from running at 100%, share them here.</div>
         <div class="uploader" data-target="facilityIssues">
           <input type="file" accept="image/*" multiple capture="environment">
-          <div class="uploader-text">📷 Tap to take or upload photos (optional)</div>
+          <div class="uploader-text">📷 Tap to take or upload photos</div>
           <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
         <div class="thumbs" data-thumbs="facilityIssues"></div>
@@ -388,7 +399,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
   </form>
 
-  <div class="foot">DM Store Visit Guide · v1.6</div>
+  <div class="foot">DM Store Visit Guide · v1.7</div>
 </div>
 
 <script>
@@ -425,11 +436,12 @@ const directory = {
 };
 
 const filesBucket = {
+  planogramPhoto:    [],
   mobileTables:      [],
   accessoryWalls:    [],
   tvWhiteboard:      [],
-  cleanlinessIssues: [],
   safeBuckets:       [],
+  cleanlinessIssues: [],
   facilityIssues:    []
 };
 
@@ -808,7 +820,6 @@ function updateUploaderCount(target){
   const count = (filesBucket[target] || []).length;
   const max   = CONFIG.MAX_PHOTOS_PER_UPLOADER;
   const input = box.querySelector('input[type="file"]');
-  const isOptional = input ? input.dataset.required === undefined : false;
   const textEl = box.querySelector('.uploader-text');
   const subEl  = box.querySelector('.uploader-sub');
 
@@ -819,7 +830,7 @@ function updateUploaderCount(target){
     if(input){ input.disabled = true; input.tabIndex = -1; }
   } else {
     box.classList.remove("full");
-    if(textEl) textEl.textContent = "📷 Tap to take or upload photos" + (isOptional ? " (optional)" : "");
+    if(textEl) textEl.textContent = "📷 Tap to take or upload photos";
     if(subEl)  subEl.textContent  = count > 0
       ? count + " of " + max + " uploaded · tap to add " + (max - count) + " more"
       : "Up to " + max + " photos · JPG/PNG, auto-compressed";
@@ -882,11 +893,8 @@ function renderThumb(container, target, fileObj){
 }
 
 function validateUploader(box){
-  const target = box.dataset.target;
-  const input  = box.querySelector('input[type="file"]');
-  if(input.dataset.required !== undefined){
-    if(filesBucket[target].length > 0) box.classList.remove("invalid");
-  }
+  // All uploaders are optional now — just clear any leftover invalid styling.
+  if(box) box.classList.remove("invalid");
 }
 
 /* ---------- IMAGE COMPRESSION ----------
@@ -1039,77 +1047,13 @@ function wireSubmit(){
 }
 
 function validateForm(){
-  let ok = true;
-  let firstInvalid = null;
-  const invalidSections = new Set();
-  const flag = (el) => {
-    if(!el) return;
-    if(!firstInvalid) firstInvalid = el;
-    const sec = el.closest ? el.closest(".section") : null;
-    if(sec) invalidSections.add(sec);
-  };
-
-  // Standard inputs marked `required`
-  document.querySelectorAll("input[required], textarea[required], select[required]").forEach(el => {
-    el.classList.remove("invalid");
-    if(el.type === "radio") return; // handled below
-    if(!el.value || !el.value.trim()){
-      el.classList.add("invalid"); ok = false; flag(el);
-    } else if(el.type === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(el.value.trim())){
-      el.classList.add("invalid"); ok = false; flag(el);
-    }
-  });
-
-  // Required radio groups
-  ["planogramCompliant","uniformsCompliant","npsPitch","quoteSheetsProperUse","authIdSms"].forEach(name => {
-    const group = document.getElementsByName(name);
-    const checked = Array.from(group).some(r => r.checked);
-    const wrapper = group[0]?.closest(".yesno");
-    if(wrapper) wrapper.classList.remove("invalid");
-    if(!checked){
-      ok = false;
-      if(wrapper){
-        wrapper.querySelectorAll(".pill").forEach(p => p.style.borderColor = "var(--error)");
-      }
-      flag(group[0]);
-    } else if(wrapper){
-      wrapper.querySelectorAll(".pill").forEach(p => p.style.borderColor = "");
-    }
-  });
-
-  // Required file uploaders
-  document.querySelectorAll(".uploader").forEach(box => {
-    const input = box.querySelector('input[type="file"]');
-    box.classList.remove("invalid");
-    box.style.borderColor = "";
-    if(input.dataset.required !== undefined){
-      const target = box.dataset.target;
-      if(filesBucket[target].length === 0){
-        box.classList.add("invalid");
-        box.style.borderColor = "var(--error)";
-        ok = false;
-        flag(box);
-      }
-    }
-  });
-
-  // Reset all section-level flags, then re-mark + auto-open invalid ones
+  // Nothing is required anymore — every field is optional. Clear any leftover
+  // invalid styling from prior submissions and always allow the submit to proceed.
+  document.querySelectorAll(".invalid").forEach(el => el.classList.remove("invalid"));
   document.querySelectorAll(".section.invalid-section").forEach(s => s.classList.remove("invalid-section"));
-  invalidSections.forEach(s => { openSection(s); s.classList.add("invalid-section"); });
-
-  const status = document.getElementById("status");
-  if(!ok){
-    status.className = "status error show";
-    status.textContent = "Please complete the highlighted required fields. Tap any flagged section to review.";
-    // Wait for the accordion expansion animation before scrolling
-    if(firstInvalid){
-      setTimeout(() => firstInvalid.scrollIntoView({ behavior: "smooth", block: "center" }), 320);
-    }
-  } else {
-    status.className = "status";
-    status.textContent = "";
-  }
-  return ok;
+  document.querySelectorAll(".uploader").forEach(box => { box.style.borderColor = ""; });
+  document.querySelectorAll(".yesno .pill").forEach(p => { p.style.borderColor = ""; });
+  return true;
 }
 
 function buildPayload(){
@@ -1127,7 +1071,7 @@ function buildPayload(){
 
   const payload = {
     submittedAt: new Date().toISOString(),
-    formVersion: "1.6",
+    formVersion: "1.7",
 
     // ----- routing fields (auto-populated from store directory; used by Zapier email step) -----
     store:             store,
@@ -1273,6 +1217,7 @@ function buildEmailHtml(p){
   '<tr><td style="padding:0 28px 24px">' +
     sectionHeader(2, "Store Presentation") +
     qa("Planogram compliant?", yn(p.planogramCompliant)) +
+    (has("planogramPhoto") ? qa("XVIP Screenshot ("  + ph.planogramPhoto.length + ")", photoGrid(ph.planogramPhoto, "XVIP planogram")) : "") +
     (has("mobileTables")   ? qa("Mobile Tables ("    + ph.mobileTables.length   + ")", photoGrid(ph.mobileTables,   "Mobile tables"))   : "") +
     (has("accessoryWalls") ? qa("Accessory Walls ("  + ph.accessoryWalls.length + ")", photoGrid(ph.accessoryWalls, "Accessory walls")) : "") +
     (has("tvWhiteboard")   ? qa("TV / Whiteboard ("  + ph.tvWhiteboard.length   + ")", photoGrid(ph.tvWhiteboard,   "TV or whiteboard"))   : "") +
