@@ -40,6 +40,10 @@ body{padding:16px 12px 80px}
 .hdr h1{font-size:22px;font-weight:700;letter-spacing:-.01em;line-height:1.25}
 .hdr p{margin-top:6px;font-size:13px;opacity:.85}
 .hdr .sub{margin-top:10px;font-size:12px;opacity:.7;font-weight:500}
+.hdr .save-badge{display:inline-block;margin-top:8px;padding:4px 10px;font-size:11px;font-weight:600;background:rgba(255,255,255,.15);border:1px solid rgba(255,255,255,.25);border-radius:999px;letter-spacing:.04em;opacity:.85}
+.hdr .save-badge.active{background:rgba(34,197,94,.25);border-color:rgba(187,247,208,.5)}
+.hdr .restored-banner{display:none;margin-top:10px;padding:8px 12px;background:rgba(34,197,94,.18);border:1px solid rgba(187,247,208,.5);border-radius:8px;font-size:12px;font-weight:500;line-height:1.4}
+.hdr .restored-banner.show{display:block}
 
 /* FORM */
 form{display:flex;flex-direction:column;gap:14px}
@@ -145,6 +149,8 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
     <h1>DM Store Visit Guide</h1>
     <p>Please fill this out daily as you visit your stores.</p>
     <div class="sub" id="storeCountSub">Loading store directory…</div>
+    <div class="save-badge" id="saveBadge" title="Your answers and photos are saved locally on this device — if you accidentally close the page, your work will be restored.">💾 Auto-saving</div>
+    <div class="restored-banner" id="restoredBanner">✓ Restored your previous work — keep going where you left off.</div>
   </header>
 
   <form id="visitForm" novalidate>
@@ -377,7 +383,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
   </form>
 
-  <div class="foot">DM Store Visit Guide · v1.4</div>
+  <div class="foot">DM Store Visit Guide · v1.5</div>
 </div>
 
 <script>
@@ -386,7 +392,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
    =========================================================================== */
 const CONFIG = {
   // 🔗 PASTE YOUR ZAPIER CATCH-HOOK URL HERE
-  WEBHOOK_URL: "https://hooks.zapier.com/hooks/catch/20441079/2s6gj2f/",
+  WEBHOOK_URL: "https://hooks.zapier.com/hooks/catch/REPLACE_ME/REPLACE_ME/",
 
   // Live store directory (raw JSON file from BluFox Mobile)
   DIRECTORY_URL: "https://raw.githubusercontent.com/blufoxmobile/Daily-Sales-Report/main/data/store-directory.json",
@@ -418,6 +424,155 @@ const filesBucket = {
   facilityIssues:    []
 };
 
+// Number of photos currently being compressed in the background.
+// Submit is blocked while > 0 so we never ship a partial payload.
+let pendingCompressions = 0;
+
+/* ===========================================================================
+   SESSION PERSISTENCE
+   --------------------------------------------------------------------------
+   Mobile Safari can silently terminate the page when the camera is launched
+   or when memory gets tight. That used to wipe every photo and answer the DM
+   had entered, leaving them staring at a blank form.
+   We now mirror every photo + form value into localStorage on each change,
+   and restore it on load. This makes the whole form crash-proof: even if the
+   browser kills the tab, the next time it reopens we rebuild every thumbnail
+   and refill every field automatically.
+   =========================================================================== */
+const STORAGE_KEY  = "dm-visit-guide-v1";
+const STORAGE_TTL  = 24 * 60 * 60 * 1000; // 24h — older drafts auto-expire
+let   saveTimer    = null;
+
+function saveSession(){
+  // Debounce so rapid changes don't hammer storage during bulk uploads.
+  if(saveTimer) clearTimeout(saveTimer);
+  saveTimer = setTimeout(() => {
+    try {
+      const state = {
+        savedAt:     Date.now(),
+        filesBucket: filesBucket,
+        formValues:  collectFormValues()
+      };
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      flashSaveBadge();
+    } catch(err){
+      console.warn("[DM Visit Guide] Auto-save failed (storage may be full):", err);
+      const badge = document.getElementById("saveBadge");
+      if(badge){
+        badge.textContent = "⚠️ Storage full — older drafts may not restore";
+        badge.style.background = "rgba(245,158,11,.25)";
+      }
+    }
+  }, 250);
+}
+
+function flashSaveBadge(){
+  const badge = document.getElementById("saveBadge");
+  if(!badge) return;
+  badge.classList.add("active");
+  badge.textContent = "✓ Saved";
+  clearTimeout(flashSaveBadge._t);
+  flashSaveBadge._t = setTimeout(() => {
+    badge.classList.remove("active");
+    badge.textContent = "💾 Auto-saving";
+  }, 1500);
+}
+
+function loadSession(){
+  let state = null;
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if(!raw) return false;
+    state = JSON.parse(raw);
+  } catch(err){
+    console.warn("[DM Visit Guide] Could not parse saved session:", err);
+    return false;
+  }
+  if(!state || !state.savedAt) return false;
+  if(Date.now() - state.savedAt > STORAGE_TTL){
+    clearSession();
+    return false;
+  }
+
+  let restoredAnything = false;
+
+  // ---- Restore photos ----
+  if(state.filesBucket && typeof state.filesBucket === "object"){
+    Object.keys(filesBucket).forEach(k => {
+      const saved = state.filesBucket[k];
+      if(!Array.isArray(saved)) return;
+      // Only keep valid entries (defensive — drops anything that lost its dataUrl)
+      const clean = saved.filter(fo => fo && typeof fo.dataUrl === "string" && fo.dataUrl.startsWith("data:image/") && fo.dataUrl.length > 200);
+      if(!clean.length) return;
+      filesBucket[k] = clean;
+      const thumbs = document.querySelector(`[data-thumbs="${k}"]`);
+      if(thumbs){
+        thumbs.innerHTML = "";
+        clean.forEach(fo => renderThumb(thumbs, k, fo));
+      }
+      const box = document.querySelector(`.uploader[data-target="${k}"]`);
+      if(box) validateUploader(box);
+      restoredAnything = true;
+    });
+  }
+
+  // ---- Restore text / select / radio values ----
+  if(state.formValues && typeof state.formValues === "object"){
+    Object.entries(state.formValues).forEach(([name, value]) => {
+      const els = document.getElementsByName(name);
+      if(!els || !els.length) return;
+      if(els[0].type === "radio"){
+        els.forEach(r => { r.checked = (r.value === value); });
+        if(value) restoredAnything = true;
+      } else if(els[0].type === "hidden" && name === "visitDate"){
+        // leave visitDate as today — never restore an old date
+      } else {
+        els[0].value = value || "";
+        if(value) restoredAnything = true;
+      }
+    });
+    // Re-trigger store change so the store-info preview repopulates.
+    const storeSel = document.getElementById("store");
+    if(storeSel && storeSel.value){
+      // Defer until after the directory finishes loading
+      const trigger = () => storeSel.dispatchEvent(new Event("change"));
+      if(directory.stores.length) trigger(); else setTimeout(trigger, 1200);
+    }
+  }
+
+  if(restoredAnything){
+    const banner = document.getElementById("restoredBanner");
+    if(banner){
+      banner.classList.add("show");
+      setTimeout(() => banner.classList.remove("show"), 8000);
+    }
+  }
+  return restoredAnything;
+}
+
+function clearSession(){
+  try { localStorage.removeItem(STORAGE_KEY); } catch(_){}
+}
+
+function collectFormValues(){
+  const form = document.getElementById("visitForm");
+  if(!form) return {};
+  const fd = new FormData(form);
+  const out = {};
+  for(const [k, v] of fd.entries()){
+    // FormData only includes the *checked* radio, which is what we want.
+    if(typeof v === "string") out[k] = v;
+  }
+  return out;
+}
+
+function wireAutoSave(){
+  const form = document.getElementById("visitForm");
+  if(!form) return;
+  form.addEventListener("input",  saveSession);
+  form.addEventListener("change", saveSession);
+}
+
 /* ===========================================================================
    INIT — populate date, load store directory, wire up uploaders
    =========================================================================== */
@@ -432,6 +587,20 @@ window.addEventListener("DOMContentLoaded", () => {
   wireUploaders();
   wireStoreChange();
   wireSubmit();
+  wireAutoSave();
+
+  // Restore any prior session (photos + answers). Runs AFTER wiring so the
+  // uploader inputs exist for validateUploader() calls.
+  // Wait a tick so DOM is fully ready, then a bit longer for directory.
+  setTimeout(loadSession, 50);
+
+  // Belt-and-suspenders: also save right before the tab is hidden.
+  // On iOS this fires when the user switches to the camera app.
+  document.addEventListener("visibilitychange", () => {
+    if(document.visibilityState === "hidden") saveSession();
+  });
+  window.addEventListener("pagehide",   saveSession);
+  window.addEventListener("beforeunload", saveSession);
 });
 
 /* ---------- COLLAPSIBLE SECTIONS ---------- */
@@ -545,49 +714,99 @@ function wireUploaders(){
     const input  = box.querySelector('input[type="file"]');
     const thumbs = document.querySelector(`[data-thumbs="${target}"]`);
 
-    input.addEventListener("change", async (e) => {
-      const files = Array.from(e.target.files || []);
+    // Shared handler used by both <input> change and drag-drop. Each photo is
+    // counted in `pendingCompressions` so the submit button stays disabled
+    // until every single photo has been compressed AND saved.
+    const handleFiles = async (files) => {
       for(const f of files){
-        if(!f.type.startsWith("image/")) continue;
+        if(!f || !f.type || !f.type.startsWith("image/")) continue;
+        pendingCompressions++;
+        updateSubmitState();
         try {
           const compressed = await compressImage(f);
+          // Defensive: refuse anything that doesn't look like a real JPEG dataURL.
+          // iOS Safari is known to return "data:," from canvas.toDataURL when
+          // it can't allocate enough memory — without this guard those blanks
+          // were ending up in the email.
+          if(!compressed || typeof compressed.dataUrl !== "string"
+             || !compressed.dataUrl.startsWith("data:image/")
+             || compressed.dataUrl.length < 500){
+            throw new Error("Image came back empty (the phone may be low on memory — try one photo at a time)");
+          }
           filesBucket[target].push(compressed);
           renderThumb(thumbs, target, compressed);
+          saveSession();
         } catch(err){
-          console.error("Compression failed", err);
+          console.error("[DM Visit Guide] Compression failed for", f && f.name, err);
+          showInlineUploadError(box, (err && err.message) || "Could not process this photo. Try again.");
+        } finally {
+          pendingCompressions--;
+          updateSubmitState();
         }
       }
-      // reset input so same file can be re-selected later
-      input.value = "";
+      // Reset input so the same file can be re-selected if needed
+      try { input.value = ""; } catch(_){}
       validateUploader(box);
-    });
+    };
+
+    input.addEventListener("change", (e) => handleFiles(Array.from(e.target.files || [])));
 
     // Drag & drop
     ["dragenter","dragover"].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.add("drag"); }));
     ["dragleave","drop"].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.remove("drag"); }));
-    box.addEventListener("drop", async (e) => {
-      const files = Array.from(e.dataTransfer.files || []);
-      for(const f of files){
-        if(!f.type.startsWith("image/")) continue;
-        const compressed = await compressImage(f);
-        filesBucket[target].push(compressed);
-        renderThumb(thumbs, target, compressed);
-      }
-      validateUploader(box);
-    });
+    box.addEventListener("drop", (e) => handleFiles(Array.from(e.dataTransfer.files || [])));
   });
+}
+
+function showInlineUploadError(box, msg){
+  let err = box.parentElement.querySelector(".upload-err");
+  if(!err){
+    err = document.createElement("div");
+    err.className = "upload-err";
+    err.style.cssText = "margin-top:6px;padding:8px 10px;background:#FEF2F2;color:#991B1B;border:1px solid #FECACA;border-radius:8px;font-size:12.5px;line-height:1.4";
+    box.parentElement.appendChild(err);
+  }
+  err.textContent = "⚠️ " + msg;
+  clearTimeout(showInlineUploadError._t);
+  showInlineUploadError._t = setTimeout(() => { if(err && err.parentElement) err.remove(); }, 8000);
+}
+
+function updateSubmitState(){
+  const btn = document.getElementById("submitBtn");
+  if(!btn) return;
+  // Don't fight the in-flight Submit/Submitted states.
+  if(btn.dataset.state === "submitting" || btn.dataset.state === "submitted") return;
+  if(pendingCompressions > 0){
+    btn.disabled  = true;
+    btn.innerHTML = '<span class="spinner"></span>Processing ' + pendingCompressions + ' photo' + (pendingCompressions === 1 ? '' : 's') + '…';
+  } else {
+    btn.disabled  = false;
+    btn.textContent = "Submit Visit Guide";
+  }
 }
 
 function renderThumb(container, target, fileObj){
   const wrap = document.createElement("div");
   wrap.className = "thumb";
-  wrap.innerHTML = `<img src="${fileObj.dataUrl}" alt=""><button type="button" class="x" aria-label="Remove">✕</button>`;
-  wrap.querySelector(".x").addEventListener("click", () => {
+  const img = document.createElement("img");
+  img.src      = fileObj.dataUrl;
+  img.alt      = "";
+  img.loading  = "eager";
+  img.decoding = "async";
+  const x = document.createElement("button");
+  x.type            = "button";
+  x.className       = "x";
+  x.setAttribute("aria-label", "Remove");
+  x.textContent     = "✕";
+  wrap.appendChild(img);
+  wrap.appendChild(x);
+  x.addEventListener("click", () => {
     const idx = filesBucket[target].indexOf(fileObj);
     if(idx >= 0) filesBucket[target].splice(idx, 1);
     wrap.remove();
     const box = document.querySelector(`.uploader[data-target="${target}"]`);
     validateUploader(box);
+    saveSession();
   });
   container.appendChild(wrap);
 }
@@ -600,31 +819,62 @@ function validateUploader(box){
   }
 }
 
-/* ---------- IMAGE COMPRESSION ---------- */
+/* ---------- IMAGE COMPRESSION ----------
+   Robust compression with retries at progressively smaller dimensions if
+   iOS Safari runs out of memory (canvas.toDataURL returns "data:," or throws).
+*/
 function compressImage(file){
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onerror = () => reject(reader.error);
+    reader.onerror = () => reject(reader.error || new Error("Could not read file"));
     reader.onload = () => {
       const img = new Image();
-      img.onerror = () => reject(new Error("Could not load image"));
+      img.onerror = () => reject(new Error("Could not load image (corrupt or unsupported format)"));
       img.onload = () => {
-        const max = CONFIG.IMG_MAX_DIMENSION;
-        let { width, height } = img;
-        if(width > max || height > max){
-          if(width >= height){ height = Math.round(height * (max/width)); width = max; }
-          else                { width  = Math.round(width  * (max/height)); height = max; }
+        // Try progressively smaller sizes if a larger one fails (iOS Safari).
+        const attempts = [
+          { max: CONFIG.IMG_MAX_DIMENSION, q: CONFIG.IMG_QUALITY },
+          { max: 1024,                     q: 0.72 },
+          { max: 800,                      q: 0.68 },
+          { max: 640,                      q: 0.65 }
+        ];
+        let lastErr = null;
+        for(const a of attempts){
+          try {
+            let { width, height } = img;
+            if(width > a.max || height > a.max){
+              if(width >= height){ height = Math.round(height * (a.max/width));  width = a.max; }
+              else                { width  = Math.round(width  * (a.max/height)); height = a.max; }
+            }
+            const canvas = document.createElement("canvas");
+            canvas.width  = width;
+            canvas.height = height;
+            const ctx = canvas.getContext("2d");
+            if(!ctx) throw new Error("No 2D canvas context");
+            // White background just in case source has transparency (JPEG can't).
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
+            const dataUrl = canvas.toDataURL("image/jpeg", a.q);
+            // iOS Safari can return "data:," when out of memory — treat as failure.
+            if(!dataUrl || dataUrl.length < 500 || !dataUrl.startsWith("data:image/")){
+              throw new Error("Encoder returned empty image at " + a.max + "px");
+            }
+            // Free the canvas eagerly (helps iOS reclaim memory between photos)
+            canvas.width = 0; canvas.height = 0;
+            resolve({
+              name:     (file.name || "photo.jpg").replace(/\.\w+$/, "") + ".jpg",
+              mimeType: "image/jpeg",
+              sizeKB:   Math.round((dataUrl.length * 0.75) / 1024),
+              dataUrl:  dataUrl
+            });
+            return;
+          } catch(err){
+            lastErr = err;
+            // try the next smaller size
+          }
         }
-        const canvas = document.createElement("canvas");
-        canvas.width = width; canvas.height = height;
-        canvas.getContext("2d").drawImage(img, 0, 0, width, height);
-        const dataUrl = canvas.toDataURL("image/jpeg", CONFIG.IMG_QUALITY);
-        resolve({
-          name:     (file.name || "photo.jpg").replace(/\.\w+$/, "") + ".jpg",
-          mimeType: "image/jpeg",
-          sizeKB:   Math.round((dataUrl.length * 0.75) / 1024),
-          dataUrl
-        });
+        reject(lastErr || new Error("Image compression failed"));
       };
       img.src = reader.result;
     };
@@ -637,13 +887,29 @@ function wireSubmit(){
   const form = document.getElementById("visitForm");
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
-    if(!validateForm()) return;
 
     const btn    = document.getElementById("submitBtn");
     const status = document.getElementById("status");
 
-    const payload = buildPayload();
+    // 1. Block if any photos are still being compressed in the background.
+    if(pendingCompressions > 0){
+      status.className   = "status info show";
+      status.textContent = "Hold on — still processing " + pendingCompressions + " photo" + (pendingCompressions === 1 ? '' : 's') + ". The Submit button will re-enable in a moment.";
+      return;
+    }
 
+    // 2. Run normal validation.
+    if(!validateForm()) return;
+
+    // 3. Final safety net — strip any photo entries that lost their dataUrl
+    //    (shouldn't happen anymore, but cheap insurance against blank photos in the email).
+    Object.keys(filesBucket).forEach(k => {
+      filesBucket[k] = filesBucket[k].filter(fo =>
+        fo && typeof fo.dataUrl === "string" && fo.dataUrl.startsWith("data:image/") && fo.dataUrl.length > 500
+      );
+    });
+
+    const payload = buildPayload();
     console.log("Submitting payload:", payload);
 
     if(CONFIG.WEBHOOK_URL.includes("REPLACE_ME")){
@@ -652,41 +918,52 @@ function wireSubmit(){
       return;
     }
 
-    btn.disabled = true;
+    btn.dataset.state = "submitting";
+    btn.disabled  = true;
     btn.innerHTML = '<span class="spinner"></span>Submitting…';
-    status.className = "status info show";
+    status.className   = "status info show";
     status.textContent = "Sending your visit guide…";
 
     try {
+      // NOTE: Content-Type is "text/plain" intentionally — it makes this a
+      // "simple" CORS request so Zapier's catch hook accepts it without a
+      // preflight failure. The hook still parses the body as JSON.
       const resp = await fetch(CONFIG.WEBHOOK_URL, {
         method: "POST",
         headers: { "Content-Type": "text/plain;charset=UTF-8" },
         body: JSON.stringify(payload)
       });
       if(!resp.ok) throw new Error("HTTP " + resp.status);
+
+      // SUCCESS — clear the saved draft so nothing from this visit gets reloaded later.
+      clearSession();
+
       status.className = "status success show";
       status.innerHTML = "✅ Submitted! Thanks — your visit guide was sent.";
-      btn.textContent = "Submitted ✓";
-      // Optional: auto-reset after a few seconds
+      btn.dataset.state = "submitted";
+      btn.textContent   = "Submitted ✓";
+
       setTimeout(() => {
         form.reset();
         Object.keys(filesBucket).forEach(k => filesBucket[k] = []);
         document.querySelectorAll(".thumbs").forEach(t => t.innerHTML = "");
         document.getElementById("storeInfo").classList.remove("show");
         closeAllSections();
-        btn.disabled = false;
+        delete btn.dataset.state;
+        btn.disabled    = false;
         btn.textContent = "Submit Visit Guide";
-        status.className = "status";
+        status.className   = "status";
         status.textContent = "";
         const t = new Date();
         document.getElementById("visitDate").value = t.getFullYear() + "-" + String(t.getMonth()+1).padStart(2,"0") + "-" + String(t.getDate()).padStart(2,"0");
         window.scrollTo({ top: 0, behavior: "smooth" });
       }, 4000);
     } catch(err){
-      btn.disabled = false;
+      delete btn.dataset.state;
+      btn.disabled    = false;
       btn.textContent = "Submit Visit Guide";
       status.className = "status error show";
-      status.innerHTML = "❌ Submission failed: " + escapeHTML(err.message) + ". Try again, or screenshot this and share with Jeff.";
+      status.innerHTML = "❌ Submission failed: " + escapeHTML(err.message) + ". Your work is still saved — try again, or screenshot this and share with Jeff.";
     }
   });
 }
@@ -780,7 +1057,7 @@ function buildPayload(){
 
   const payload = {
     submittedAt: new Date().toISOString(),
-    formVersion: "1.4",
+    formVersion: "1.5",
 
     // ----- routing fields (auto-populated from store directory; used by Zapier email step) -----
     store:             store,
