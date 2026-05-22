@@ -102,6 +102,11 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 .uploader{border:2px dashed var(--inp-border);border-radius:10px;background:var(--section-bg);padding:18px 14px;text-align:center;cursor:pointer;transition:all .15s;position:relative}
 .uploader:hover,.uploader.drag{border-color:var(--brand-2);background:#EEF4FF}
 .uploader input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
+.uploader.full{border-style:solid;border-color:#A7F3D0;background:#ECFDF5;cursor:default}
+.uploader.full:hover{border-color:#A7F3D0;background:#ECFDF5}
+.uploader.full .uploader-text{color:#065F46}
+.uploader.full .uploader-sub{color:#047857}
+.uploader.full input[type="file"]{pointer-events:none}
 .uploader-text{font-size:14px;font-weight:600;color:var(--brand-2)}
 .uploader-sub{font-size:12px;color:var(--muted);margin-top:4px}
 .thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(96px,1fr));gap:8px;margin-top:10px}
@@ -194,7 +199,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
         <div class="uploader" data-target="mobileTables">
           <input type="file" accept="image/*" multiple capture="environment" data-required>
           <div class="uploader-text">📷 Tap to take or upload photos</div>
-          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+          <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
         <div class="thumbs" data-thumbs="mobileTables"></div>
       </div>
@@ -205,7 +210,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
         <div class="uploader" data-target="accessoryWalls">
           <input type="file" accept="image/*" multiple capture="environment" data-required>
           <div class="uploader-text">📷 Tap to take or upload photos</div>
-          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+          <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
         <div class="thumbs" data-thumbs="accessoryWalls"></div>
       </div>
@@ -216,7 +221,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
         <div class="uploader" data-target="tvWhiteboard">
           <input type="file" accept="image/*" multiple capture="environment" data-required>
           <div class="uploader-text">📷 Tap to take or upload photos</div>
-          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+          <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
         <div class="thumbs" data-thumbs="tvWhiteboard"></div>
       </div>
@@ -227,7 +232,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
         <div class="uploader" data-target="safeBuckets">
           <input type="file" accept="image/*" multiple capture="environment" data-required>
           <div class="uploader-text">📷 Tap to take or upload photos</div>
-          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+          <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
         <div class="thumbs" data-thumbs="safeBuckets"></div>
       </div>
@@ -257,7 +262,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
         <div class="uploader" data-target="cleanlinessIssues">
           <input type="file" accept="image/*" multiple capture="environment">
           <div class="uploader-text">📷 Tap to take or upload photos (optional)</div>
-          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+          <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
         <div class="thumbs" data-thumbs="cleanlinessIssues"></div>
       </div>
@@ -367,7 +372,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
         <div class="uploader" data-target="facilityIssues">
           <input type="file" accept="image/*" multiple capture="environment">
           <div class="uploader-text">📷 Tap to take or upload photos (optional)</div>
-          <div class="uploader-sub">JPG / PNG — auto-compressed</div>
+          <div class="uploader-sub">Up to 4 photos · JPG/PNG, auto-compressed</div>
         </div>
         <div class="thumbs" data-thumbs="facilityIssues"></div>
       </div>
@@ -383,7 +388,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
   </form>
 
-  <div class="foot">DM Store Visit Guide · v1.5</div>
+  <div class="foot">DM Store Visit Guide · v1.6</div>
 </div>
 
 <script>
@@ -400,6 +405,10 @@ const CONFIG = {
   // Image compression to keep webhook payload manageable
   IMG_MAX_DIMENSION: 1280,   // px — longest edge after resize
   IMG_QUALITY:       0.78,   // 0–1 JPEG quality
+
+  // Cap per uploader. Keeps webhook payload bounded (max 6 × 4 = 24 photos)
+  // and keeps the email body clean (each section renders as a tidy 2×2 grid).
+  MAX_PHOTOS_PER_UPLOADER: 4,
 
   // Show the store-manager block to the DM after picking a store? (false = silent background only)
   SHOW_STORE_INFO_PREVIEW: true,
@@ -501,9 +510,16 @@ function loadSession(){
     Object.keys(filesBucket).forEach(k => {
       const saved = state.filesBucket[k];
       if(!Array.isArray(saved)) return;
-      // Only keep valid entries (defensive — drops anything that lost its dataUrl)
-      const clean = saved.filter(fo => fo && typeof fo.dataUrl === "string" && fo.dataUrl.startsWith("data:image/") && fo.dataUrl.length > 200);
-      if(!clean.length) return;
+      // Only keep valid entries (defensive — drops anything that lost its dataUrl).
+      // Also trim to the current per-uploader max in case the cap changed
+      // since the draft was saved.
+      const clean = saved
+        .filter(fo => fo && typeof fo.dataUrl === "string" && fo.dataUrl.startsWith("data:image/") && fo.dataUrl.length > 200)
+        .slice(0, CONFIG.MAX_PHOTOS_PER_UPLOADER);
+      if(!clean.length){
+        updateUploaderCount(k);
+        return;
+      }
       filesBucket[k] = clean;
       const thumbs = document.querySelector(`[data-thumbs="${k}"]`);
       if(thumbs){
@@ -512,6 +528,7 @@ function loadSession(){
       }
       const box = document.querySelector(`.uploader[data-target="${k}"]`);
       if(box) validateUploader(box);
+      updateUploaderCount(k);
       restoredAnything = true;
     });
   }
@@ -718,8 +735,18 @@ function wireUploaders(){
     // counted in `pendingCompressions` so the submit button stays disabled
     // until every single photo has been compressed AND saved.
     const handleFiles = async (files) => {
+      let skipped = 0;
       for(const f of files){
         if(!f || !f.type || !f.type.startsWith("image/")) continue;
+
+        // Enforce the 4-photo cap. Counts what's already saved plus what's
+        // in-flight so a batch upload (e.g. picking 6 photos at once) can't
+        // sneak past the limit while earlier ones are still compressing.
+        if(filesBucket[target].length >= CONFIG.MAX_PHOTOS_PER_UPLOADER){
+          skipped++;
+          continue;
+        }
+
         pendingCompressions++;
         updateSubmitState();
         try {
@@ -733,9 +760,16 @@ function wireUploaders(){
              || compressed.dataUrl.length < 500){
             throw new Error("Image came back empty (the phone may be low on memory — try one photo at a time)");
           }
-          filesBucket[target].push(compressed);
-          renderThumb(thumbs, target, compressed);
-          saveSession();
+          // Re-check the cap right before push, in case a parallel batch landed
+          // photos while this one was being compressed.
+          if(filesBucket[target].length >= CONFIG.MAX_PHOTOS_PER_UPLOADER){
+            skipped++;
+          } else {
+            filesBucket[target].push(compressed);
+            renderThumb(thumbs, target, compressed);
+            saveSession();
+            updateUploaderCount(target);
+          }
         } catch(err){
           console.error("[DM Visit Guide] Compression failed for", f && f.name, err);
           showInlineUploadError(box, (err && err.message) || "Could not process this photo. Try again.");
@@ -744,9 +778,13 @@ function wireUploaders(){
           updateSubmitState();
         }
       }
+      if(skipped > 0){
+        showInlineUploadError(box, "Only " + CONFIG.MAX_PHOTOS_PER_UPLOADER + " photos allowed per section — skipped " + skipped + ". Remove one to swap it out.");
+      }
       // Reset input so the same file can be re-selected if needed
       try { input.value = ""; } catch(_){}
       validateUploader(box);
+      updateUploaderCount(target);
     };
 
     input.addEventListener("change", (e) => handleFiles(Array.from(e.target.files || [])));
@@ -755,7 +793,38 @@ function wireUploaders(){
     ["dragenter","dragover"].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.add("drag"); }));
     ["dragleave","drop"].forEach(ev => box.addEventListener(ev, e => { e.preventDefault(); box.classList.remove("drag"); }));
     box.addEventListener("drop", (e) => handleFiles(Array.from(e.dataTransfer.files || [])));
+
+    // Initialize the "0 of 4" counter on every uploader at page load.
+    updateUploaderCount(target);
   });
+}
+
+/* Updates the uploader's text + visual state to reflect how many of the
+   4 allowed photos have been used. Marks the uploader as .full when capped
+   so taps don't open the picker. */
+function updateUploaderCount(target){
+  const box = document.querySelector(`.uploader[data-target="${target}"]`);
+  if(!box) return;
+  const count = (filesBucket[target] || []).length;
+  const max   = CONFIG.MAX_PHOTOS_PER_UPLOADER;
+  const input = box.querySelector('input[type="file"]');
+  const isOptional = input ? input.dataset.required === undefined : false;
+  const textEl = box.querySelector('.uploader-text');
+  const subEl  = box.querySelector('.uploader-sub');
+
+  if(count >= max){
+    box.classList.add("full");
+    if(textEl) textEl.textContent = "✓ All " + max + " photos uploaded";
+    if(subEl)  subEl.textContent  = "Remove one below to swap it out";
+    if(input){ input.disabled = true; input.tabIndex = -1; }
+  } else {
+    box.classList.remove("full");
+    if(textEl) textEl.textContent = "📷 Tap to take or upload photos" + (isOptional ? " (optional)" : "");
+    if(subEl)  subEl.textContent  = count > 0
+      ? count + " of " + max + " uploaded · tap to add " + (max - count) + " more"
+      : "Up to " + max + " photos · JPG/PNG, auto-compressed";
+    if(input){ input.disabled = false; input.tabIndex = 0; }
+  }
 }
 
 function showInlineUploadError(box, msg){
@@ -806,6 +875,7 @@ function renderThumb(container, target, fileObj){
     wrap.remove();
     const box = document.querySelector(`.uploader[data-target="${target}"]`);
     validateUploader(box);
+    updateUploaderCount(target);
     saveSession();
   });
   container.appendChild(wrap);
@@ -1057,7 +1127,7 @@ function buildPayload(){
 
   const payload = {
     submittedAt: new Date().toISOString(),
-    formVersion: "1.5",
+    formVersion: "1.6",
 
     // ----- routing fields (auto-populated from store directory; used by Zapier email step) -----
     store:             store,
