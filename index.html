@@ -67,8 +67,10 @@ form{display:flex;flex-direction:column;gap:14px}
 .section-body-inner{overflow:hidden;min-height:0}
 .section-body-pad{padding:18px}
 
-.field{display:flex;flex-direction:column;gap:6px;margin-bottom:16px}
+.field{display:flex;flex-direction:column;gap:8px;padding:14px 16px;background:var(--section-bg);border:1px solid var(--border);border-radius:10px;margin-bottom:10px}
 .field:last-child{margin-bottom:0}
+/* Intro/help-only fields (no <label>) get a softer left accent so they read as context, not as a question */
+.field:not(:has(label)){background:#F0F6FF;border-color:#DBEAFE;border-left:3px solid var(--brand-2)}
 
 label{font-size:14px;font-weight:600;color:var(--text);line-height:1.35}
 label .req{color:var(--error);font-weight:700;margin-left:2px}
@@ -99,7 +101,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 .yesno input:focus-visible + .pill{box-shadow:0 0 0 3px rgba(29,78,216,.2)}
 
 /* File uploader */
-.uploader{border:2px dashed var(--inp-border);border-radius:10px;background:var(--section-bg);padding:18px 14px;text-align:center;cursor:pointer;transition:all .15s;position:relative}
+.uploader{border:2px dashed var(--inp-border);border-radius:10px;background:var(--card);padding:18px 14px;text-align:center;cursor:pointer;transition:all .15s;position:relative}
 .uploader:hover,.uploader.drag{border-color:var(--brand-2);background:#EEF4FF}
 .uploader input[type="file"]{position:absolute;inset:0;opacity:0;cursor:pointer}
 .uploader.full{border-style:solid;border-color:#A7F3D0;background:#ECFDF5;cursor:default}
@@ -257,7 +259,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
       <div class="field">
         <div class="help" style="margin-top:0">
-          If there are any opportunities, please coach the store manager. The store should look brand new — no dust, debris, or trash. Cleanliness is a direct reflection of you and your management team. All employees should have uniforms and name tags. If you need uniforms, fill out the <a href="https://blufoxmobile.github.io/Uniform-Order-Form/" target="_blank" rel="noopener">UNIFORM ORDER FORM</a> then send a screenshot to Jeff and Del.
+          If there are any opportunities, please coach the store manager. The store should look brand new — no dust, debris, or trash. Cleanliness is a direct reflection of you and your management team.
         </div>
       </div>
 
@@ -284,6 +286,12 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
          ==================================================================== -->
     <div class="section">
       <div class="section-title"><span class="num">4</span> Team & Uniforms</div>
+
+      <div class="field">
+        <div class="help" style="margin-top:0">
+          All employees should have uniforms and name tags. If you need uniforms, fill out the <a href="https://blufoxmobile.github.io/Uniform-Order-Form/" target="_blank" rel="noopener">UNIFORM ORDER FORM</a> to place an order today.
+        </div>
+      </div>
 
       <div class="field">
         <label>Are all employees wearing name tags and proper uniforms?</label>
@@ -399,7 +407,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
   </form>
 
-  <div class="foot">DM Store Visit Guide · v1.8</div>
+  <div class="foot">DM Store Visit Guide · v1.9</div>
 </div>
 
 <script>
@@ -1071,7 +1079,7 @@ function buildPayload(){
 
   const payload = {
     submittedAt: new Date().toISOString(),
-    formVersion: "1.8",
+    formVersion: "1.9",
 
     // ----- routing fields (auto-populated from store directory; used by Zapier email step) -----
     store:             store,
