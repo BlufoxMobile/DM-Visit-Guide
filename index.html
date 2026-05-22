@@ -290,12 +290,13 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
       <div class="field">
         <div class="help" style="margin-top:0">
           All employees should have uniforms and name tags. If you need uniforms, fill out the <a href="https://blufoxmobile.github.io/Uniform-Order-Form/" target="_blank" rel="noopener">UNIFORM ORDER FORM</a> to place an order today.
+          <br><br>
+          No non-Xfinity-approved shirts, hoodies or hats on the sales floor. Order personalized name tags here: <a href="https://www.amazon.com/gp/product/B0FDKCWM8G/" target="_blank" rel="noopener">Amazon Name Tag link</a>.
         </div>
       </div>
 
       <div class="field">
         <label>Are all employees wearing name tags and proper uniforms?</label>
-        <div class="help">No non-Xfinity-approved shirts, hoodies or hats on the sales floor. Order personalized name tags here: <a href="https://www.amazon.com/gp/product/B0FDKCWM8G/" target="_blank" rel="noopener">Amazon Name Tag link</a>.</div>
         <div class="yesno">
           <label><input type="radio" name="uniformsCompliant" value="Yes"><span class="pill">Yes</span></label>
           <label><input type="radio" name="uniformsCompliant" value="No"><span class="pill">No</span></label>
@@ -315,14 +316,6 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
         <div class="yesno">
           <label><input type="radio" name="npsPitch" value="Yes"><span class="pill">Yes</span></label>
           <label><input type="radio" name="npsPitch" value="No"><span class="pill">No</span></label>
-        </div>
-      </div>
-
-      <div class="field">
-        <label>Are your reps using Auth ID Scans and sending SMS Consent to every customer?</label>
-        <div class="yesno">
-          <label><input type="radio" name="authIdSms" value="Yes"><span class="pill">Yes</span></label>
-          <label><input type="radio" name="authIdSms" value="No"><span class="pill">No</span></label>
         </div>
       </div>
     </div>
@@ -407,7 +400,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
   </form>
 
-  <div class="foot">DM Store Visit Guide · v1.9</div>
+  <div class="foot">DM Store Visit Guide · v1.10</div>
 </div>
 
 <script>
@@ -1079,7 +1072,7 @@ function buildPayload(){
 
   const payload = {
     submittedAt: new Date().toISOString(),
-    formVersion: "1.9",
+    formVersion: "1.10",
 
     // ----- routing fields (auto-populated from store directory; used by Zapier email step) -----
     store:             store,
@@ -1101,7 +1094,6 @@ function buildPayload(){
 
     // ----- NPS -----
     npsPitch:  fd.get("npsPitch")  || "",
-    authIdSms: fd.get("authIdSms") || "",
 
     // ----- quote sheets -----
     quoteSheetTrafficPct:   (fd.get("quoteSheetTrafficPct") || "").trim(),
@@ -1216,7 +1208,6 @@ function buildEmailHtml(p){
       '<td align="center" style="padding:4px">' + yn(p.planogramCompliant)   + '<div style="font-size:10px;color:#64748b;margin-top:6px;letter-spacing:.04em">Planogram</div></td>' +
       '<td align="center" style="padding:4px">' + yn(p.uniformsCompliant)    + '<div style="font-size:10px;color:#64748b;margin-top:6px;letter-spacing:.04em">Uniforms</div></td>' +
       '<td align="center" style="padding:4px">' + yn(p.npsPitch)             + '<div style="font-size:10px;color:#64748b;margin-top:6px;letter-spacing:.04em">NPS Pitch</div></td>' +
-      '<td align="center" style="padding:4px">' + yn(p.authIdSms)            + '<div style="font-size:10px;color:#64748b;margin-top:6px;letter-spacing:.04em">Auth ID/SMS</div></td>' +
       '<td align="center" style="padding:4px">' + yn(p.quoteSheetsProperUse) + '<div style="font-size:10px;color:#64748b;margin-top:6px;letter-spacing:.04em">Quote Sheets</div></td>' +
     '</tr></table>' +
   '</td></tr>' +
@@ -1240,7 +1231,6 @@ function buildEmailHtml(p){
 
     sectionHeader(5, "NPS") +
     qa("Proper NPS pitch with colored text?", yn(p.npsPitch)) +
-    qa("Auth ID Scans & SMS Consent?", yn(p.authIdSms)) +
 
     sectionHeader(6, "Quote Sheets") +
     qa("% of traffic that has seen a mobile quote sheet this month",
