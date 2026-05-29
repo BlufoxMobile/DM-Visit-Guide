@@ -7,6 +7,8 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<!-- SheetJS — used to parse the daily Sales Report .xlsx in the browser. Defer so it never blocks paint. -->
+<script defer src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 /* =========================================================================
    THEME — edit these to rebrand quickly
@@ -122,6 +124,37 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 .store-info.show{display:block}
 .store-info b{font-weight:600}
 
+/* =========================================================================
+   Sales-report performance panels (store + reps)
+   ========================================================================= */
+.perf-panel{margin-top:14px;display:none}
+.perf-panel.show{display:block}
+.perf-panel .perf-loading{padding:14px 16px;background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:10px;font-size:13px;color:#64748B;text-align:center}
+.perf-panel .perf-error{padding:12px 14px;background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;font-size:13px;color:#991B1B}
+.perf-card{background:#FFFFFF;border:1px solid var(--border);border-radius:12px;padding:14px 14px 12px;margin-top:10px;box-shadow:0 1px 2px rgba(15,31,70,.04)}
+.perf-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
+.perf-card-title{font-size:13px;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:.04em}
+.perf-card-sub{font-size:11px;color:var(--muted);font-weight:500}
+.perf-card-rank{background:var(--brand);color:#fff;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
+.perf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
+.perf-cell{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:8px 10px}
+.perf-cell .perf-label{font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:3px;line-height:1.2}
+.perf-cell .perf-val{font-size:15px;font-weight:700;color:#1E293B;line-height:1.15}
+.perf-cell.perf-good .perf-val{color:#15803D}
+.perf-cell.perf-good{background:#F0FDF4;border-color:#BBF7D0}
+.perf-cell.perf-bad  .perf-val{color:#B91C1C}
+.perf-cell.perf-bad{background:#FEF2F2;border-color:#FECACA}
+.perf-cell.perf-neutral .perf-val{color:#475569}
+.perf-section-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin:12px 0 6px}
+.perf-rep-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
+.perf-rep-meta b{color:#1E293B;font-weight:600}
+.perf-footnote{font-size:10px;color:#94A3B8;margin-top:8px;font-style:italic}
+@media (max-width: 480px){
+  .perf-grid{grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px}
+  .perf-cell{padding:6px 8px}
+  .perf-cell .perf-val{font-size:14px}
+}
+
 /* Submit area */
 .submit-wrap{margin-top:6px}
 .submit-btn{width:100%;font:inherit;font-size:16px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--brand-2),#2563EB);border:none;border-radius:12px;padding:16px;cursor:pointer;box-shadow:0 6px 16px rgba(29,78,216,.25);transition:all .15s;letter-spacing:.02em}
@@ -174,6 +207,12 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
           <option value="">Loading stores…</option>
         </select>
         <div class="store-info" id="storeInfo"></div>
+
+        <!-- Store-level performance card (today's snapshot from Sales Report.xlsx) -->
+        <div class="perf-panel" id="storePerf"></div>
+
+        <!-- Per-rep coaching cards for this store -->
+        <div class="perf-panel" id="repPerf"></div>
       </div>
 
       <!-- Visit date captured silently — set on load to today, sent in payload -->
@@ -400,7 +439,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
   </form>
 
-  <div class="foot">DM Store Visit Guide · v1.12</div>
+  <div class="foot">DM Store Visit Guide · v1.13</div>
 </div>
 
 <script>
@@ -413,6 +452,11 @@ const CONFIG = {
 
   // Live store directory (raw JSON file from BluFox Mobile)
   DIRECTORY_URL: "https://raw.githubusercontent.com/blufoxmobile/Daily-Sales-Report/main/data/store-directory.json",
+
+  // Daily Sales Report — same xlsx the TV dashboard parses. Refreshed daily.
+  // We pull it on demand when a DM picks a store and surface today's snapshot.
+  SALES_REPORT_URL: "https://raw.githubusercontent.com/BlufoxMobile/Daily-Sales-Report/main/data/Sales%20Report.xlsx",
+  SALES_RSD_FILTER: "Bilbrey",   // only show stores under this RSD (matches Daily-Sales-Report dashboard)
 
   // Image compression to keep webhook payload manageable.
   // 800px @ 0.68 looks crisp inline in email and keeps a 16-photo submission
@@ -731,17 +775,427 @@ async function loadDirectory(){
 function wireStoreChange(){
   const sel = document.getElementById("store");
   const info = document.getElementById("storeInfo");
+  const storePerfEl = document.getElementById("storePerf");
+  const repPerfEl   = document.getElementById("repPerf");
   sel.addEventListener("change", () => {
     const s = sel.value;
-    if(!s){ info.classList.remove("show"); info.innerHTML = ""; return; }
-    if(!CONFIG.SHOW_STORE_INFO_PREVIEW){ info.classList.remove("show"); return; }
-    const mgrName  = directory.storeManagerNames[s] || "—";
-    const mgrEmail = directory.storeManagers[s]     || "—";
-    const dmEmail  = directory.storeDMs[s]          || "—";
-    info.innerHTML = `<b>Store Manager:</b> ${escapeHTML(mgrName)} &lt;${escapeHTML(mgrEmail)}&gt;<br>
-                      <b>District Manager:</b> ${escapeHTML(dmEmail)}`;
-    info.classList.add("show");
+    if(!s){
+      info.classList.remove("show"); info.innerHTML = "";
+      storePerfEl.classList.remove("show"); storePerfEl.innerHTML = "";
+      repPerfEl.classList.remove("show");   repPerfEl.innerHTML   = "";
+      return;
+    }
+    if(CONFIG.SHOW_STORE_INFO_PREVIEW){
+      const mgrName  = directory.storeManagerNames[s] || "—";
+      const mgrEmail = directory.storeManagers[s]     || "—";
+      const dmEmail  = directory.storeDMs[s]          || "—";
+      info.innerHTML = `<b>Store Manager:</b> ${escapeHTML(mgrName)} &lt;${escapeHTML(mgrEmail)}&gt;<br>
+                        <b>District Manager:</b> ${escapeHTML(dmEmail)}`;
+      info.classList.add("show");
+    } else {
+      info.classList.remove("show");
+    }
+    // Pull today's snapshot from Sales Report.xlsx and render the two cards.
+    renderPerformancePanels(s).catch(err => console.warn("perf render failed:", err));
   });
+}
+
+/* ===========================================================================
+   SALES REPORT — load + parse the daily .xlsx (mirrors the Daily-Sales-Report
+   TV dashboard logic). Fetched once per page session and cached. Surfaces:
+     - store row (national rank + ~25 metrics)
+     - reps array (national rank + ~10 metrics per rep)
+   for the store the DM picked. Both are rendered on screen and also
+   embedded in the Zapier payload so the email includes them.
+   ========================================================================= */
+const salesData = {
+  state: "idle",              // idle | loading | ready | error
+  stores: [],                 // array of {rank,name,gp,...}
+  reps:   [],                 // array of {rank,name,store,gp,...}
+  error:  null,
+  loadedAt: null,
+  _promise: null              // in-flight load promise (de-dupe)
+};
+
+// Translate the visit-guide's display name ("Bourbonnais Xfinity Store") to
+// the sales-report short name ("Bourbonnais"). Sales sheet uses the bare
+// city/region label as the canonical key on both store + rep rows.
+function toSalesStoreName(displayName){
+  if(!displayName) return "";
+  return String(displayName).replace(/\s+Xfinity\s+Store\s*$/i, "").trim();
+}
+
+async function loadSalesReport(){
+  if(salesData.state === "ready") return salesData;
+  if(salesData._promise)         return salesData._promise;
+
+  salesData.state = "loading";
+  salesData._promise = (async () => {
+    // Wait for the deferred SheetJS script to finish loading. defer guarantees
+    // it has run by DOMContentLoaded, but a DM might pick a store before that
+    // on a slow connection — poll briefly just in case.
+    for(let i = 0; i < 50 && typeof XLSX === "undefined"; i++){
+      await new Promise(r => setTimeout(r, 100));
+    }
+    if(typeof XLSX === "undefined") throw new Error("SheetJS failed to load");
+
+    const resp = await fetch(CONFIG.SALES_REPORT_URL + "?_=" + Date.now(), { cache: "no-store" });
+    if(!resp.ok) throw new Error("Sales report HTTP " + resp.status);
+    const buf = await resp.arrayBuffer();
+    const wb  = XLSX.read(buf, { type: "array" });
+
+    salesData.stores = parseStoreRank(wb);
+    salesData.reps   = parseRepRank(wb, salesData.stores.map(s => (s.name || "").toLowerCase()));
+    salesData.loadedAt = new Date();
+    salesData.state    = "ready";
+    return salesData;
+  })().catch(err => {
+    salesData.state = "error";
+    salesData.error = err;
+    salesData._promise = null; // allow a retry on next store pick
+    throw err;
+  });
+  return salesData._promise;
+}
+
+// Find header row by looking for a row containing "Rank". Returns index or -1.
+function findHeaderRow(rows){
+  for(let i = 0; i < Math.min(20, rows.length); i++){
+    const r = rows[i];
+    if(r && r.some(c => c && String(c).trim() === "Rank")) return i;
+  }
+  return -1;
+}
+const hi = (headers, ...needles) => headers.findIndex(h => {
+  if(!h) return false;
+  const s = String(h).toLowerCase();
+  return needles.every(n => s.includes(String(n).toLowerCase()));
+});
+const num = (v) => { const n = Number(v); return isNaN(n) ? 0 : n; };
+
+function parseStoreRank(wb){
+  const ws = wb.Sheets["Store Rank"];
+  if(!ws) return [];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+  const hr = findHeaderRow(rows);
+  if(hr < 0) return [];
+  const h = rows[hr].map(c => c == null ? "" : String(c).trim());
+
+  const iRank      = h.findIndex(c => c.trim() === "Rank");
+  const iRegion    = hi(h, "region");
+  const iStore     = hi(h, "store");
+  const iRSD       = hi(h, "rsd");
+  const iDM        = h.findIndex(c => c.trim().toLowerCase() === "dm");
+  const iSM        = h.findIndex(c => c.trim().toLowerCase() === "sm");
+  const iGP        = h.findIndex(c => c.startsWith("GP $") || c.startsWith("GP\n") || c.trim() === "GP");
+  const iGPTrend   = hi(h, "gp", "trend");
+  const iTarget    = hi(h, "target");
+  const iVarTarget = hi(h, "var");
+  const iGPDay     = hi(h, "gp", "day");
+  const iMobileCR  = hi(h, "mobile", "cr");
+  const iFiscalCR  = hi(h, "fiscal", "cr");
+  const iNPS       = h.findIndex(c => c.toLowerCase().includes("fiscal nps") && !c.toLowerCase().includes("last"));
+  const iPlus      = (() => {
+    let ix = hi(h, "mobile plus mix");
+    if(ix < 0) ix = hi(h, "plus mix");
+    if(ix < 0) ix = hi(h, "premium mix");
+    return ix;
+  })();
+  const iMobMTD    = hi(h, "mobile", "mtd");
+  const iHSI       = h.findIndex(c => c.toLowerCase().includes("hsi"));
+  const iGigPct    = h.findIndex(c => c && c.toUpperCase().includes("GIG") && c.includes("%"));
+  const iNewToUpg  = h.findIndex(c => c && c.toUpperCase().includes("NEW TO UPG"));
+  const iAccPerDev = h.findIndex(c => c && c.toLowerCase().includes("accessory") && c.toLowerCase().includes("device"));
+  const iVideo     = hi(h, "video");
+  const iTabletMTD = h.findIndex(c => c && c.toLowerCase().includes("tablet") && (c.toLowerCase().includes("mtd") || c.toLowerCase().includes("month")));
+  const iWatchMTD  = h.findIndex(c => c && c.toLowerCase().includes("watch")  && (c.toLowerCase().includes("mtd") || c.toLowerCase().includes("month")));
+
+  const out = [];
+  for(let i = hr + 1; i < rows.length; i++){
+    const r = rows[i];
+    if(!r || r[iRank] == null) break;
+    const rsd = r[iRSD];
+    if(!rsd || !String(rsd).includes(CONFIG.SALES_RSD_FILTER)) continue;
+    out.push({
+      rank: num(r[iRank]),
+      region: r[iRegion] || "",
+      name:   r[iStore]  || "",
+      dm:     r[iDM] || "",
+      sm:     r[iSM] || "",
+      gp:        num(r[iGP]),
+      gpTrend:   iGPTrend   >= 0 ? num(r[iGPTrend])   : 0,
+      target:    iTarget    >= 0 ? num(r[iTarget])    : 0,
+      varTarget: iVarTarget >= 0 ? num(r[iVarTarget]) : 0,
+      gpPerDay:  iGPDay     >= 0 ? num(r[iGPDay])     : 0,
+      mobileCR:  iMobileCR  >= 0 ? num(r[iMobileCR])  : 0,
+      fiscalCR:  iFiscalCR  >= 0 ? num(r[iFiscalCR])  : 0,
+      nps:       iNPS       >= 0 ? num(r[iNPS])       : 0,
+      plusMix:   iPlus      >= 0 ? num(r[iPlus])      : 0,
+      mobileMTD: iMobMTD    >= 0 ? num(r[iMobMTD])    : 0,
+      hsi:       iHSI       >= 0 ? num(r[iHSI])       : 0,
+      gigPct:    iGigPct    >= 0 ? num(r[iGigPct])    : 0,
+      newToUpg:  iNewToUpg  >= 0 ? num(r[iNewToUpg])  : 0,
+      accPerDev: iAccPerDev >= 0 ? num(r[iAccPerDev]) : 0,
+      videoAttach: iVideo   >= 0 ? num(r[iVideo])     : 0,
+      tabletMTD: iTabletMTD >= 0 ? num(r[iTabletMTD]) : 0,
+      watchMTD:  iWatchMTD  >= 0 ? num(r[iWatchMTD])  : 0,
+    });
+  }
+  out.sort((a, b) => a.rank - b.rank);
+  return out;
+}
+
+function parseRepRank(wb, allowedStoresLower){
+  const ws = wb.Sheets["Rep Rank"];
+  if(!ws) return [];
+  const rows = XLSX.utils.sheet_to_json(ws, { header: 1, defval: null });
+  const hr = findHeaderRow(rows);
+  if(hr < 0) return [];
+  const h = rows[hr].map(c => c == null ? "" : String(c).trim());
+
+  const iRank   = h.findIndex(c => c.trim() === "Rank");
+  const iName   = h.findIndex(c => c.toLowerCase().includes("employee"));
+  const iTitle  = h.findIndex(c => c.toLowerCase().includes("title"));
+  const iLoc    = h.findIndex(c => c.toLowerCase().includes("location"));
+  const iDM     = h.findIndex(c => c.trim().toLowerCase() === "dm");
+  const iGP     = h.findIndex(c => c.startsWith("GP $") || c.startsWith("GP\n") || c.trim() === "GP");
+  const iMobile = h.findIndex(c => c.toLowerCase().includes("mobile mtd"));
+  const iPlus   = (() => {
+    let ix = h.findIndex(c => c.toLowerCase().includes("mobile plus mix"));
+    if(ix < 0) ix = h.findIndex(c => c.toLowerCase().includes("plus mix"));
+    if(ix < 0) ix = h.findIndex(c => c.includes("Premium Mix"));
+    return ix;
+  })();
+  const iNPS    = h.findIndex(c => c.toLowerCase().includes("fiscal nps") && !c.toLowerCase().includes("last"));
+  const iGPHR   = h.findIndex(c => c.includes("GP/ HR") || c.includes("GP/HR"));
+  const iGigPct = h.findIndex(c => c && c.toUpperCase().includes("GIG") && c.includes("%"));
+  const iTablet = h.findIndex(c => c && c.toLowerCase().includes("tablet") && (c.toLowerCase().includes("mtd") || c.toLowerCase().includes("month")));
+  const iWatch  = h.findIndex(c => c && c.toLowerCase().includes("watch")  && (c.toLowerCase().includes("mtd") || c.toLowerCase().includes("month")));
+  const iN2U    = h.findIndex(c => c && c.toLowerCase().includes("new")    && c.toLowerCase().includes("upg"));
+  const iAcc    = h.findIndex(c => c && c.toLowerCase().includes("access") && (c.toLowerCase().includes("mobile") || c.toLowerCase().includes("per mob")));
+
+  const allowed = (allowedStoresLower && allowedStoresLower.length)
+    ? new Set(allowedStoresLower)
+    : null;
+
+  const out = [];
+  for(let i = hr + 1; i < rows.length; i++){
+    const r = rows[i];
+    if(!r || r[iRank] == null) break;
+    const loc = iLoc >= 0 ? String(r[iLoc] || "").toLowerCase() : "";
+    if(allowed && !allowed.has(loc)) continue;
+    out.push({
+      rank:  num(r[iRank]),
+      name:  r[iName]  || "",
+      title: r[iTitle] || "",
+      store: r[iLoc]   || "",
+      dm:    r[iDM]    || "",
+      gp:        iGP     >= 0 ? num(r[iGP])     : 0,
+      mobile:    iMobile >= 0 ? num(r[iMobile]) : 0,
+      plusMix:   iPlus   >= 0 ? num(r[iPlus])   : 0,
+      nps:       iNPS    >= 0 ? num(r[iNPS])    : 0,
+      gphr:      iGPHR   >= 0 ? num(r[iGPHR])   : 0,
+      gigPct:    iGigPct >= 0 ? num(r[iGigPct]) : 0,
+      tabletMTD: iTablet >= 0 ? num(r[iTablet]) : 0,
+      watchMTD:  iWatch  >= 0 ? num(r[iWatch])  : 0,
+      newToUpg:  iN2U    >= 0 ? num(r[iN2U])    : 0,
+      accPerMobile: iAcc >= 0 ? num(r[iAcc])    : 0,
+    });
+  }
+  return out;
+}
+
+/* Median across an array of numbers (zeros included only if there are any
+   non-zero peers, otherwise zero is the median by default). */
+function median(arr){
+  const nums = arr.filter(v => typeof v === "number" && !isNaN(v));
+  if(!nums.length) return 0;
+  const sorted = nums.slice().sort((a, b) => a - b);
+  const mid = Math.floor(sorted.length / 2);
+  return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
+}
+
+/* Build a {metric: median} map across ALL reps so each rep cell can be
+   colored green (≥ median = top 50%) or red (< median = bottom 50%). */
+function buildRepMedians(reps){
+  const fields = ["rank","gp","mobile","plusMix","nps","gphr","gigPct","tabletMTD","watchMTD","newToUpg","accPerMobile"];
+  const out = {};
+  fields.forEach(f => { out[f] = median(reps.map(r => r[f])); });
+  return out;
+}
+
+/* For most metrics higher = better. For `rank` it's inverted (lower = better). */
+const REP_LOWER_IS_BETTER = new Set(["rank"]);
+function colorClass(field, value, med){
+  if(med == null || med === 0 && value === 0) return "perf-neutral";
+  if(value == null || isNaN(value))           return "perf-neutral";
+  const better = REP_LOWER_IS_BETTER.has(field) ? (value <= med) : (value >= med);
+  return better ? "perf-good" : "perf-bad";
+}
+
+/* ----- Formatting helpers ----- */
+const fmt = {
+  dollars:   v => "$" + Math.round(v).toLocaleString(),
+  dollars2:  v => "$" + (v).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
+  pct:       v => (v <= 1 && v >= -1 ? (v * 100) : v).toFixed(1) + "%",
+  pctRaw:    v => (Number(v) || 0).toFixed(1) + "%",
+  int:       v => Math.round(v).toLocaleString(),
+  signedDollars: v => (v >= 0 ? "+" : "−") + "$" + Math.abs(Math.round(v)).toLocaleString(),
+  rank:      v => "#" + Math.round(v),
+};
+
+/* Render the two cards (store summary + rep coaching) under the store picker. */
+async function renderPerformancePanels(displayStoreName){
+  const storeEl = document.getElementById("storePerf");
+  const repEl   = document.getElementById("repPerf");
+
+  storeEl.classList.add("show");
+  repEl.classList.add("show");
+  storeEl.innerHTML = '<div class="perf-loading">Loading today\'s store performance…</div>';
+  repEl.innerHTML   = '<div class="perf-loading">Loading rep rankings…</div>';
+
+  let data;
+  try {
+    data = await loadSalesReport();
+  } catch(err){
+    storeEl.innerHTML = '<div class="perf-error">Could not load today\'s sales report (' + escapeHTML(err.message) + '). The visit guide still works — you can submit without these numbers.</div>';
+    repEl.innerHTML = "";
+    return;
+  }
+
+  const short = toSalesStoreName(displayStoreName).toLowerCase();
+  const store = data.stores.find(s => (s.name || "").toLowerCase() === short);
+  const reps  = data.reps.filter(r => (r.store || "").toLowerCase() === short)
+                          .sort((a, b) => a.rank - b.rank);
+
+  if(!store){
+    storeEl.innerHTML = '<div class="perf-error">No row found for <b>' + escapeHTML(displayStoreName) + '</b> in today\'s Sales Report (looked for "' + escapeHTML(toSalesStoreName(displayStoreName)) + '").</div>';
+  } else {
+    storeEl.innerHTML = renderStoreCard(store);
+  }
+
+  if(!reps.length){
+    repEl.innerHTML = '<div class="perf-error">No reps listed for this store in today\'s Sales Report.</div>';
+  } else {
+    const medians = buildRepMedians(data.reps);
+    repEl.innerHTML = renderRepCards(reps, medians);
+  }
+}
+
+function storeCells(s){
+  // All store metrics displayed equal-weight (neutral coloring — no green/red
+  // here per Jeff: every metric matters equally to the bigger picture).
+  return [
+    { label: "National Rank",  val: fmt.rank(s.rank) },
+    { label: "GP $",           val: fmt.dollars(s.gp) },
+    { label: "GP Trend",       val: fmt.signedDollars(s.gpTrend) },
+    { label: "Target",         val: fmt.dollars(s.target) },
+    { label: "Var to Target",  val: fmt.signedDollars(s.varTarget) },
+    { label: "GP / Day",       val: fmt.dollars(s.gpPerDay) },
+    { label: "Mobile CR",      val: fmt.pct(s.mobileCR) },
+    { label: "Fiscal CR",      val: fmt.pct(s.fiscalCR) },
+    { label: "Fiscal NPS",     val: fmt.pctRaw(s.nps) },
+    { label: "Plus Mix",       val: fmt.pct(s.plusMix) },
+    { label: "Gig %",          val: fmt.pct(s.gigPct) },
+    { label: "New-to-Upg",     val: fmt.pct(s.newToUpg) },
+    { label: "Acc / Device",   val: fmt.dollars2(s.accPerDev) },
+    { label: "Mobile MTD",     val: fmt.int(s.mobileMTD) },
+    { label: "Tablet MTD",     val: fmt.int(s.tabletMTD) },
+    { label: "Watch MTD",      val: fmt.int(s.watchMTD) },
+    { label: "HSI",            val: fmt.int(s.hsi) },
+    { label: "Video Attach",   val: fmt.pct(s.videoAttach) }
+  ];
+}
+
+function renderStoreCard(s){
+  const cells = storeCells(s).map(c =>
+    '<div class="perf-cell perf-neutral"><div class="perf-label">' + escapeHTML(c.label) +
+    '</div><div class="perf-val">' + escapeHTML(c.val) + '</div></div>'
+  ).join("");
+  return (
+    '<div class="perf-card">' +
+      '<div class="perf-card-head">' +
+        '<div>' +
+          '<div class="perf-card-title">Store Performance · Today</div>' +
+          '<div class="perf-card-sub">' + escapeHTML(s.name) +
+            (s.region ? ' · ' + escapeHTML(s.region) : '') + '</div>' +
+        '</div>' +
+        '<div class="perf-card-rank">National #' + Math.round(s.rank) + '</div>' +
+      '</div>' +
+      '<div class="perf-grid">' + cells + '</div>' +
+    '</div>'
+  );
+}
+
+function repCells(r, medians){
+  // Each cell carries percentile coloring: green = ≥ peer median (top 50%),
+  // red = below peer median (bottom 50%). Rank is inverted.
+  const c = (field, value, formatted) =>
+    '<div class="perf-cell ' + colorClass(field, value, medians[field]) + '">' +
+      '<div class="perf-label">' + label(field) + '</div>' +
+      '<div class="perf-val">' + escapeHTML(formatted) + '</div>' +
+    '</div>';
+  function label(f){
+    return ({
+      rank: "Nat'l Rank", gp: "GP $", mobile: "Mobile MTD", plusMix: "Plus Mix",
+      nps: "Fiscal NPS", gphr: "GP / HR", gigPct: "Gig %",
+      tabletMTD: "Tablet MTD", watchMTD: "Watch MTD", newToUpg: "New-to-Upg",
+      accPerMobile: "Acc / Mobile"
+    })[f] || f;
+  }
+  return [
+    c("rank",         r.rank,         fmt.rank(r.rank)),
+    c("gp",           r.gp,           fmt.dollars(r.gp)),
+    c("gphr",         r.gphr,         fmt.dollars2(r.gphr)),
+    c("nps",          r.nps,          fmt.pctRaw(r.nps)),
+    c("plusMix",      r.plusMix,      fmt.pct(r.plusMix)),
+    c("gigPct",       r.gigPct,       fmt.pct(r.gigPct)),
+    c("newToUpg",     r.newToUpg,     fmt.pct(r.newToUpg)),
+    c("accPerMobile", r.accPerMobile, fmt.dollars2(r.accPerMobile)),
+    c("mobile",       r.mobile,       fmt.int(r.mobile)),
+    c("tabletMTD",    r.tabletMTD,    fmt.int(r.tabletMTD)),
+    c("watchMTD",     r.watchMTD,     fmt.int(r.watchMTD))
+  ].join("");
+}
+
+function renderRepCards(reps, medians){
+  const cards = reps.map(r => (
+    '<div class="perf-card">' +
+      '<div class="perf-card-head">' +
+        '<div>' +
+          '<div class="perf-card-title">' + escapeHTML(r.name || "Unnamed") + '</div>' +
+          '<div class="perf-card-sub">' + escapeHTML(r.title || "Rep") +
+            (r.dm ? ' · DM ' + escapeHTML(r.dm) : '') + '</div>' +
+        '</div>' +
+        '<div class="perf-card-rank">National #' + Math.round(r.rank) + '</div>' +
+      '</div>' +
+      '<div class="perf-grid">' + repCells(r, medians) + '</div>' +
+    '</div>'
+  )).join("");
+  return (
+    '<div class="perf-section-label">Reps at this store (' + reps.length + ') — green = top 50% of all reps, red = bottom 50%</div>' +
+    cards +
+    '<div class="perf-footnote">Source: Sales Report.xlsx · pulled ' +
+      escapeHTML(salesData.loadedAt ? salesData.loadedAt.toLocaleString() : "just now") +
+    '</div>'
+  );
+}
+
+/* Build a snapshot object suitable for embedding in the Zapier payload + email.
+   Returns null if sales data hasn't been loaded yet or this store wasn't found. */
+function getStorePerformanceSnapshot(displayStoreName){
+  if(salesData.state !== "ready") return null;
+  const short = toSalesStoreName(displayStoreName).toLowerCase();
+  const store = salesData.stores.find(s => (s.name || "").toLowerCase() === short);
+  const reps  = salesData.reps.filter(r => (r.store || "").toLowerCase() === short)
+                              .sort((a, b) => a.rank - b.rank);
+  if(!store && !reps.length) return null;
+  return {
+    pulledAt: salesData.loadedAt ? salesData.loadedAt.toISOString() : null,
+    store: store || null,
+    reps:  reps,
+    repMedians: buildRepMedians(salesData.reps)
+  };
 }
 
 /* ---------- UPLOADER WIRING ---------- */
@@ -1153,7 +1607,7 @@ function buildPayload(){
 
   const payload = {
     submittedAt: new Date().toISOString(),
-    formVersion: "1.12",
+    formVersion: "1.13",
 
     // ----- routing fields (auto-populated from store directory; used by Zapier email step) -----
     store:             store,
@@ -1192,7 +1646,12 @@ function buildPayload(){
     photos: photoSummary,
 
     // Helpful counts for spreadsheet trackers
-    photoCounts: Object.fromEntries(Object.entries(filesBucket).map(([k,v]) => [k, v.length]))
+    photoCounts: Object.fromEntries(Object.entries(filesBucket).map(([k,v]) => [k, v.length])),
+
+    // ----- store + rep performance snapshot from Sales Report.xlsx (today) -----
+    // Will be null if the report failed to load. Both the on-screen cards
+    // and the Zapier email render off this object.
+    performance: getStorePerformanceSnapshot(store)
   };
 
   // Rendered HTML email body — plug into your Zapier email step as {{emailHtml}}
@@ -1261,6 +1720,123 @@ function buildEmailHtml(p){
   const ph = p.photos || {};
   const has = (k) => ph[k] && ph[k].length > 0;
 
+  // ----- Performance block helpers -----
+  const perf = p.performance || null;
+  const cellHtml = (label, value, color) => {
+    // color is "good" | "bad" | "neutral"; maps to email-safe inline styles.
+    const palettes = {
+      good:    { bg: "#F0FDF4", border: "#BBF7D0", val: "#15803D" },
+      bad:     { bg: "#FEF2F2", border: "#FECACA", val: "#B91C1C" },
+      neutral: { bg: "#F8FAFC", border: "#E2E8F0", val: "#1E293B" }
+    };
+    const c = palettes[color] || palettes.neutral;
+    return '<td valign="top" width="33%" style="padding:4px"><div style="background:' + c.bg + ';border:1px solid ' + c.border + ';border-radius:8px;padding:8px 10px;font-family:Helvetica,Arial,sans-serif">' +
+      '<div style="font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:3px">' + esc(label) + '</div>' +
+      '<div style="font-size:15px;font-weight:700;color:' + c.val + ';line-height:1.15">' + esc(value) + '</div>' +
+    '</div></td>';
+  };
+  const cellsGrid = (cells) => {
+    // 3 columns per row — best fit for the 600px email width on both
+    // Outlook desktop and mobile (no media queries needed, native table reflow).
+    const rows = [];
+    for(let i = 0; i < cells.length; i += 3){
+      const trio = cells.slice(i, i + 3);
+      while(trio.length < 3) trio.push('<td width="33%" style="padding:4px"></td>');
+      rows.push('<tr>' + trio.join("") + '</tr>');
+    }
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:6px">' + rows.join("") + '</table>';
+  };
+  const fmtDollars     = v => "$" + Math.round(Number(v) || 0).toLocaleString();
+  const fmtDollars2    = v => "$" + ((Number(v) || 0)).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+  const fmtSignedD     = v => { const n = Number(v) || 0; return (n >= 0 ? "+" : "-") + "$" + Math.abs(Math.round(n)).toLocaleString(); };
+  const fmtPct         = v => { const n = Number(v) || 0; return (n <= 1 && n >= -1 ? n * 100 : n).toFixed(1) + "%"; };
+  const fmtPctRaw      = v => (Number(v) || 0).toFixed(1) + "%";
+  const fmtInt         = v => Math.round(Number(v) || 0).toLocaleString();
+  const fmtRank        = v => "#" + Math.round(Number(v) || 0);
+
+  const buildStorePerfBlock = () => {
+    if(!perf || !perf.store) return "";
+    const s = perf.store;
+    const cells = [
+      cellHtml("National Rank",  fmtRank(s.rank),         "neutral"),
+      cellHtml("GP $",           fmtDollars(s.gp),        "neutral"),
+      cellHtml("GP Trend",       fmtSignedD(s.gpTrend),   "neutral"),
+      cellHtml("Target",         fmtDollars(s.target),    "neutral"),
+      cellHtml("Var to Target",  fmtSignedD(s.varTarget), "neutral"),
+      cellHtml("GP / Day",       fmtDollars(s.gpPerDay),  "neutral"),
+      cellHtml("Mobile CR",      fmtPct(s.mobileCR),      "neutral"),
+      cellHtml("Fiscal CR",      fmtPct(s.fiscalCR),      "neutral"),
+      cellHtml("Fiscal NPS",     fmtPctRaw(s.nps),        "neutral"),
+      cellHtml("Plus Mix",       fmtPct(s.plusMix),       "neutral"),
+      cellHtml("Gig %",          fmtPct(s.gigPct),        "neutral"),
+      cellHtml("New-to-Upg",     fmtPct(s.newToUpg),      "neutral"),
+      cellHtml("Acc / Device",   fmtDollars2(s.accPerDev),"neutral"),
+      cellHtml("Mobile MTD",     fmtInt(s.mobileMTD),     "neutral"),
+      cellHtml("Tablet MTD",     fmtInt(s.tabletMTD),     "neutral"),
+      cellHtml("Watch MTD",      fmtInt(s.watchMTD),      "neutral"),
+      cellHtml("HSI",            fmtInt(s.hsi),           "neutral"),
+      cellHtml("Video Attach",   fmtPct(s.videoAttach),   "neutral")
+    ];
+    return '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:14px;margin-bottom:12px">' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+        '<td valign="middle"><div style="font-size:13px;font-weight:700;color:#0F1F46;text-transform:uppercase;letter-spacing:.04em">Store Performance · Today</div>' +
+        '<div style="font-size:11px;color:#64748B;margin-top:2px">' + esc(s.name) + (s.region ? ' &middot; ' + esc(s.region) : '') + '</div></td>' +
+        '<td valign="middle" align="right"><span style="display:inline-block;background:#0F1F46;color:#FFFFFF;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700">National #' + Math.round(s.rank) + '</span></td>' +
+      '</tr></table>' +
+      cellsGrid(cells) +
+    '</div>';
+  };
+
+  const colorFor = (field, value, med) => {
+    if(med == null) return "neutral";
+    if(med === 0 && value === 0) return "neutral";
+    if(value == null || isNaN(value)) return "neutral";
+    const lowerBetter = (field === "rank");
+    const better = lowerBetter ? (value <= med) : (value >= med);
+    return better ? "good" : "bad";
+  };
+
+  const buildRepCard = (r, med) => {
+    const cells = [
+      cellHtml("Nat'l Rank",   fmtRank(r.rank),         colorFor("rank",         r.rank,         med.rank)),
+      cellHtml("GP $",         fmtDollars(r.gp),        colorFor("gp",           r.gp,           med.gp)),
+      cellHtml("GP / HR",      fmtDollars2(r.gphr),     colorFor("gphr",         r.gphr,         med.gphr)),
+      cellHtml("Fiscal NPS",   fmtPctRaw(r.nps),        colorFor("nps",          r.nps,          med.nps)),
+      cellHtml("Plus Mix",     fmtPct(r.plusMix),       colorFor("plusMix",      r.plusMix,      med.plusMix)),
+      cellHtml("Gig %",        fmtPct(r.gigPct),        colorFor("gigPct",       r.gigPct,       med.gigPct)),
+      cellHtml("New-to-Upg",   fmtPct(r.newToUpg),      colorFor("newToUpg",     r.newToUpg,     med.newToUpg)),
+      cellHtml("Acc / Mobile", fmtDollars2(r.accPerMobile), colorFor("accPerMobile", r.accPerMobile, med.accPerMobile)),
+      cellHtml("Mobile MTD",   fmtInt(r.mobile),        colorFor("mobile",       r.mobile,       med.mobile)),
+      cellHtml("Tablet MTD",   fmtInt(r.tabletMTD),     colorFor("tabletMTD",    r.tabletMTD,    med.tabletMTD)),
+      cellHtml("Watch MTD",    fmtInt(r.watchMTD),      colorFor("watchMTD",     r.watchMTD,     med.watchMTD))
+    ];
+    return '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:14px;margin-bottom:10px">' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
+        '<td valign="middle"><div style="font-size:13px;font-weight:700;color:#0F1F46">' + esc(r.name || "Unnamed") + '</div>' +
+        '<div style="font-size:11px;color:#64748B;margin-top:2px">' + esc(r.title || "Rep") + (r.dm ? ' &middot; DM ' + esc(r.dm) : '') + '</div></td>' +
+        '<td valign="middle" align="right"><span style="display:inline-block;background:#0F1F46;color:#FFFFFF;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700">National #' + Math.round(r.rank) + '</span></td>' +
+      '</tr></table>' +
+      cellsGrid(cells) +
+    '</div>';
+  };
+
+  const buildRepPerfBlock = () => {
+    if(!perf || !perf.reps || !perf.reps.length) return "";
+    const med = perf.repMedians || {};
+    const cards = perf.reps.map(r => buildRepCard(r, med)).join("");
+    return '<div style="font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin:6px 0 8px">' +
+      'Reps at this store (' + perf.reps.length + ') &middot; green = top 50% of all reps, red = bottom 50%' +
+    '</div>' + cards;
+  };
+
+  const buildPerfSection = () => {
+    if(!perf || (!perf.store && !(perf.reps && perf.reps.length))) return "";
+    return sectionHeader("📊", "Today's Performance Snapshot") +
+      buildStorePerfBlock() +
+      buildRepPerfBlock() +
+      (perf.pulledAt ? '<div style="font-size:10px;color:#94A3B8;font-style:italic;margin-top:4px">Source: Sales Report.xlsx &middot; pulled ' + esc(new Date(perf.pulledAt).toLocaleString()) + '</div>' : '');
+  };
+
   return (
 '<!DOCTYPE html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>DM Visit Guide — ' + esc(p.store) + '</title></head>' +
 '<body style="margin:0;padding:0;background:#f4f6fb;font-family:Helvetica,Arial,sans-serif;-webkit-text-size-adjust:100%">' +
@@ -1295,6 +1871,7 @@ function buildEmailHtml(p){
 
   // BODY
   '<tr><td style="padding:0 28px 24px">' +
+    buildPerfSection() +
     sectionHeader(2, "Store Presentation") +
     qa("Planogram compliant?", yn(p.planogramCompliant)) +
     (has("planogramPhoto") ? qa("XVIP Screenshot ("  + ph.planogramPhoto.length + ")", photoGrid(ph.planogramPhoto, "XVIP planogram")) : "") +
