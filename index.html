@@ -439,7 +439,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
   </form>
 
-  <div class="foot">DM Store Visit Guide · v1.13</div>
+  <div class="foot">DM Store Visit Guide · v1.14</div>
 </div>
 
 <script>
@@ -887,28 +887,9 @@ function parseStoreRank(wb){
   const iRSD       = hi(h, "rsd");
   const iDM        = h.findIndex(c => c.trim().toLowerCase() === "dm");
   const iSM        = h.findIndex(c => c.trim().toLowerCase() === "sm");
-  const iGP        = h.findIndex(c => c.startsWith("GP $") || c.startsWith("GP\n") || c.trim() === "GP");
-  const iGPTrend   = hi(h, "gp", "trend");
-  const iTarget    = hi(h, "target");
-  const iVarTarget = hi(h, "var");
-  const iGPDay     = hi(h, "gp", "day");
-  const iMobileCR  = hi(h, "mobile", "cr");
-  const iFiscalCR  = hi(h, "fiscal", "cr");
-  const iNPS       = h.findIndex(c => c.toLowerCase().includes("fiscal nps") && !c.toLowerCase().includes("last"));
-  const iPlus      = (() => {
-    let ix = hi(h, "mobile plus mix");
-    if(ix < 0) ix = hi(h, "plus mix");
-    if(ix < 0) ix = hi(h, "premium mix");
-    return ix;
-  })();
-  const iMobMTD    = hi(h, "mobile", "mtd");
-  const iHSI       = h.findIndex(c => c.toLowerCase().includes("hsi"));
-  const iGigPct    = h.findIndex(c => c && c.toUpperCase().includes("GIG") && c.includes("%"));
-  const iNewToUpg  = h.findIndex(c => c && c.toUpperCase().includes("NEW TO UPG"));
-  const iAccPerDev = h.findIndex(c => c && c.toLowerCase().includes("accessory") && c.toLowerCase().includes("device"));
-  const iVideo     = hi(h, "video");
-  const iTabletMTD = h.findIndex(c => c && c.toLowerCase().includes("tablet") && (c.toLowerCase().includes("mtd") || c.toLowerCase().includes("month")));
-  const iWatchMTD  = h.findIndex(c => c && c.toLowerCase().includes("watch")  && (c.toLowerCase().includes("mtd") || c.toLowerCase().includes("month")));
+  // "Total Score" is the weighted composite score that drives the national rank.
+  // This is the single number we surface on the simplified visit-guide panel.
+  const iTotalScore = h.findIndex(c => /^total\s*score/i.test(c));
 
   const out = [];
   for(let i = hr + 1; i < rows.length; i++){
@@ -917,28 +898,12 @@ function parseStoreRank(wb){
     const rsd = r[iRSD];
     if(!rsd || !String(rsd).includes(CONFIG.SALES_RSD_FILTER)) continue;
     out.push({
-      rank: num(r[iRank]),
-      region: r[iRegion] || "",
-      name:   r[iStore]  || "",
-      dm:     r[iDM] || "",
-      sm:     r[iSM] || "",
-      gp:        num(r[iGP]),
-      gpTrend:   iGPTrend   >= 0 ? num(r[iGPTrend])   : 0,
-      target:    iTarget    >= 0 ? num(r[iTarget])    : 0,
-      varTarget: iVarTarget >= 0 ? num(r[iVarTarget]) : 0,
-      gpPerDay:  iGPDay     >= 0 ? num(r[iGPDay])     : 0,
-      mobileCR:  iMobileCR  >= 0 ? num(r[iMobileCR])  : 0,
-      fiscalCR:  iFiscalCR  >= 0 ? num(r[iFiscalCR])  : 0,
-      nps:       iNPS       >= 0 ? num(r[iNPS])       : 0,
-      plusMix:   iPlus      >= 0 ? num(r[iPlus])      : 0,
-      mobileMTD: iMobMTD    >= 0 ? num(r[iMobMTD])    : 0,
-      hsi:       iHSI       >= 0 ? num(r[iHSI])       : 0,
-      gigPct:    iGigPct    >= 0 ? num(r[iGigPct])    : 0,
-      newToUpg:  iNewToUpg  >= 0 ? num(r[iNewToUpg])  : 0,
-      accPerDev: iAccPerDev >= 0 ? num(r[iAccPerDev]) : 0,
-      videoAttach: iVideo   >= 0 ? num(r[iVideo])     : 0,
-      tabletMTD: iTabletMTD >= 0 ? num(r[iTabletMTD]) : 0,
-      watchMTD:  iWatchMTD  >= 0 ? num(r[iWatchMTD])  : 0,
+      rank:       num(r[iRank]),
+      region:     r[iRegion] || "",
+      name:       r[iStore]  || "",
+      dm:         r[iDM] || "",
+      sm:         r[iSM] || "",
+      totalScore: iTotalScore >= 0 ? num(r[iTotalScore]) : 0
     });
   }
   out.sort((a, b) => a.rank - b.rank);
@@ -958,21 +923,10 @@ function parseRepRank(wb, allowedStoresLower){
   const iTitle  = h.findIndex(c => c.toLowerCase().includes("title"));
   const iLoc    = h.findIndex(c => c.toLowerCase().includes("location"));
   const iDM     = h.findIndex(c => c.trim().toLowerCase() === "dm");
-  const iGP     = h.findIndex(c => c.startsWith("GP $") || c.startsWith("GP\n") || c.trim() === "GP");
-  const iMobile = h.findIndex(c => c.toLowerCase().includes("mobile mtd"));
-  const iPlus   = (() => {
-    let ix = h.findIndex(c => c.toLowerCase().includes("mobile plus mix"));
-    if(ix < 0) ix = h.findIndex(c => c.toLowerCase().includes("plus mix"));
-    if(ix < 0) ix = h.findIndex(c => c.includes("Premium Mix"));
-    return ix;
-  })();
-  const iNPS    = h.findIndex(c => c.toLowerCase().includes("fiscal nps") && !c.toLowerCase().includes("last"));
-  const iGPHR   = h.findIndex(c => c.includes("GP/ HR") || c.includes("GP/HR"));
-  const iGigPct = h.findIndex(c => c && c.toUpperCase().includes("GIG") && c.includes("%"));
-  const iTablet = h.findIndex(c => c && c.toLowerCase().includes("tablet") && (c.toLowerCase().includes("mtd") || c.toLowerCase().includes("month")));
-  const iWatch  = h.findIndex(c => c && c.toLowerCase().includes("watch")  && (c.toLowerCase().includes("mtd") || c.toLowerCase().includes("month")));
-  const iN2U    = h.findIndex(c => c && c.toLowerCase().includes("new")    && c.toLowerCase().includes("upg"));
-  const iAcc    = h.findIndex(c => c && c.toLowerCase().includes("access") && (c.toLowerCase().includes("mobile") || c.toLowerCase().includes("per mob")));
+  // "Total Score" = the weighted composite score the national rank is derived from.
+  const iTotalScore  = h.findIndex(c => /^total\s*score/i.test(c));
+  // "Blended Wage\r\nESTIMATE ONLY" — comp/hr the rep is currently earning.
+  const iBlendedWage = h.findIndex(c => /blended\s*wage/i.test(c));
 
   const allowed = (allowedStoresLower && allowedStoresLower.length)
     ? new Set(allowedStoresLower)
@@ -985,21 +939,13 @@ function parseRepRank(wb, allowedStoresLower){
     const loc = iLoc >= 0 ? String(r[iLoc] || "").toLowerCase() : "";
     if(allowed && !allowed.has(loc)) continue;
     out.push({
-      rank:  num(r[iRank]),
-      name:  r[iName]  || "",
-      title: r[iTitle] || "",
-      store: r[iLoc]   || "",
-      dm:    r[iDM]    || "",
-      gp:        iGP     >= 0 ? num(r[iGP])     : 0,
-      mobile:    iMobile >= 0 ? num(r[iMobile]) : 0,
-      plusMix:   iPlus   >= 0 ? num(r[iPlus])   : 0,
-      nps:       iNPS    >= 0 ? num(r[iNPS])    : 0,
-      gphr:      iGPHR   >= 0 ? num(r[iGPHR])   : 0,
-      gigPct:    iGigPct >= 0 ? num(r[iGigPct]) : 0,
-      tabletMTD: iTablet >= 0 ? num(r[iTablet]) : 0,
-      watchMTD:  iWatch  >= 0 ? num(r[iWatch])  : 0,
-      newToUpg:  iN2U    >= 0 ? num(r[iN2U])    : 0,
-      accPerMobile: iAcc >= 0 ? num(r[iAcc])    : 0,
+      rank:        num(r[iRank]),
+      name:        r[iName]  || "",
+      title:       r[iTitle] || "",
+      store:       r[iLoc]   || "",
+      dm:          r[iDM]    || "",
+      totalScore:  iTotalScore  >= 0 ? num(r[iTotalScore])  : 0,
+      blendedWage: iBlendedWage >= 0 ? num(r[iBlendedWage]) : 0
     });
   }
   return out;
@@ -1016,19 +962,20 @@ function median(arr){
 }
 
 /* Build a {metric: median} map across ALL reps so each rep cell can be
-   colored green (≥ median = top 50%) or red (< median = bottom 50%). */
+   colored green (≥ median = top 50%) or red (< median = bottom 50%).
+   We only color what's actually shown: rank + totalScore. Wage stays neutral. */
 function buildRepMedians(reps){
-  const fields = ["rank","gp","mobile","plusMix","nps","gphr","gigPct","tabletMTD","watchMTD","newToUpg","accPerMobile"];
-  const out = {};
-  fields.forEach(f => { out[f] = median(reps.map(r => r[f])); });
-  return out;
+  return {
+    rank:       median(reps.map(r => r.rank)),
+    totalScore: median(reps.map(r => r.totalScore))
+  };
 }
 
 /* For most metrics higher = better. For `rank` it's inverted (lower = better). */
 const REP_LOWER_IS_BETTER = new Set(["rank"]);
 function colorClass(field, value, med){
-  if(med == null || med === 0 && value === 0) return "perf-neutral";
-  if(value == null || isNaN(value))           return "perf-neutral";
+  if(med == null || (med === 0 && value === 0)) return "perf-neutral";
+  if(value == null || isNaN(value))             return "perf-neutral";
   const better = REP_LOWER_IS_BETTER.has(field) ? (value <= med) : (value >= med);
   return better ? "perf-good" : "perf-bad";
 }
@@ -1036,12 +983,9 @@ function colorClass(field, value, med){
 /* ----- Formatting helpers ----- */
 const fmt = {
   dollars:   v => "$" + Math.round(v).toLocaleString(),
-  dollars2:  v => "$" + (v).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-  pct:       v => (v <= 1 && v >= -1 ? (v * 100) : v).toFixed(1) + "%",
-  pctRaw:    v => (Number(v) || 0).toFixed(1) + "%",
+  dollars2:  v => "$" + (Number(v) || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
   int:       v => Math.round(v).toLocaleString(),
-  signedDollars: v => (v >= 0 ? "+" : "−") + "$" + Math.abs(Math.round(v)).toLocaleString(),
-  rank:      v => "#" + Math.round(v),
+  rank:      v => "#" + Math.round(v)
 };
 
 /* Render the two cards (store summary + rep coaching) under the store picker. */
@@ -1082,36 +1026,14 @@ async function renderPerformancePanels(displayStoreName){
   }
 }
 
-function storeCells(s){
-  // All store metrics displayed equal-weight (neutral coloring — no green/red
-  // here per Jeff: every metric matters equally to the bigger picture).
-  return [
-    { label: "National Rank",  val: fmt.rank(s.rank) },
-    { label: "GP $",           val: fmt.dollars(s.gp) },
-    { label: "GP Trend",       val: fmt.signedDollars(s.gpTrend) },
-    { label: "Target",         val: fmt.dollars(s.target) },
-    { label: "Var to Target",  val: fmt.signedDollars(s.varTarget) },
-    { label: "GP / Day",       val: fmt.dollars(s.gpPerDay) },
-    { label: "Mobile CR",      val: fmt.pct(s.mobileCR) },
-    { label: "Fiscal CR",      val: fmt.pct(s.fiscalCR) },
-    { label: "Fiscal NPS",     val: fmt.pctRaw(s.nps) },
-    { label: "Plus Mix",       val: fmt.pct(s.plusMix) },
-    { label: "Gig %",          val: fmt.pct(s.gigPct) },
-    { label: "New-to-Upg",     val: fmt.pct(s.newToUpg) },
-    { label: "Acc / Device",   val: fmt.dollars2(s.accPerDev) },
-    { label: "Mobile MTD",     val: fmt.int(s.mobileMTD) },
-    { label: "Tablet MTD",     val: fmt.int(s.tabletMTD) },
-    { label: "Watch MTD",      val: fmt.int(s.watchMTD) },
-    { label: "HSI",            val: fmt.int(s.hsi) },
-    { label: "Video Attach",   val: fmt.pct(s.videoAttach) }
-  ];
-}
-
 function renderStoreCard(s){
-  const cells = storeCells(s).map(c =>
-    '<div class="perf-cell perf-neutral"><div class="perf-label">' + escapeHTML(c.label) +
-    '</div><div class="perf-val">' + escapeHTML(c.val) + '</div></div>'
-  ).join("");
+  // Two cells only: the weighted national rank and the weighted Total Score
+  // that drives it. Everything else lives in the sales-report dashboard.
+  const cells =
+    '<div class="perf-cell perf-neutral"><div class="perf-label">National Rank</div>' +
+      '<div class="perf-val">' + escapeHTML(fmt.rank(s.rank)) + '</div></div>' +
+    '<div class="perf-cell perf-neutral"><div class="perf-label">Total Score</div>' +
+      '<div class="perf-val">' + escapeHTML(fmt.int(s.totalScore)) + '</div></div>';
   return (
     '<div class="perf-card">' +
       '<div class="perf-card-head">' +
@@ -1127,38 +1049,14 @@ function renderStoreCard(s){
   );
 }
 
-function repCells(r, medians){
-  // Each cell carries percentile coloring: green = ≥ peer median (top 50%),
-  // red = below peer median (bottom 50%). Rank is inverted.
-  const c = (field, value, formatted) =>
-    '<div class="perf-cell ' + colorClass(field, value, medians[field]) + '">' +
-      '<div class="perf-label">' + label(field) + '</div>' +
-      '<div class="perf-val">' + escapeHTML(formatted) + '</div>' +
-    '</div>';
-  function label(f){
-    return ({
-      rank: "Nat'l Rank", gp: "GP $", mobile: "Mobile MTD", plusMix: "Plus Mix",
-      nps: "Fiscal NPS", gphr: "GP / HR", gigPct: "Gig %",
-      tabletMTD: "Tablet MTD", watchMTD: "Watch MTD", newToUpg: "New-to-Upg",
-      accPerMobile: "Acc / Mobile"
-    })[f] || f;
-  }
-  return [
-    c("rank",         r.rank,         fmt.rank(r.rank)),
-    c("gp",           r.gp,           fmt.dollars(r.gp)),
-    c("gphr",         r.gphr,         fmt.dollars2(r.gphr)),
-    c("nps",          r.nps,          fmt.pctRaw(r.nps)),
-    c("plusMix",      r.plusMix,      fmt.pct(r.plusMix)),
-    c("gigPct",       r.gigPct,       fmt.pct(r.gigPct)),
-    c("newToUpg",     r.newToUpg,     fmt.pct(r.newToUpg)),
-    c("accPerMobile", r.accPerMobile, fmt.dollars2(r.accPerMobile)),
-    c("mobile",       r.mobile,       fmt.int(r.mobile)),
-    c("tabletMTD",    r.tabletMTD,    fmt.int(r.tabletMTD)),
-    c("watchMTD",     r.watchMTD,     fmt.int(r.watchMTD))
-  ].join("");
-}
-
 function renderRepCards(reps, medians){
+  // Three cells per rep: National Rank (colored), Total Score (colored),
+  // Est. Blended Wage (neutral — informational, not a coaching signal).
+  const cell = (cls, label, val) =>
+    '<div class="perf-cell ' + cls + '">' +
+      '<div class="perf-label">' + label + '</div>' +
+      '<div class="perf-val">' + escapeHTML(val) + '</div>' +
+    '</div>';
   const cards = reps.map(r => (
     '<div class="perf-card">' +
       '<div class="perf-card-head">' +
@@ -1169,7 +1067,11 @@ function renderRepCards(reps, medians){
         '</div>' +
         '<div class="perf-card-rank">National #' + Math.round(r.rank) + '</div>' +
       '</div>' +
-      '<div class="perf-grid">' + repCells(r, medians) + '</div>' +
+      '<div class="perf-grid">' +
+        cell(colorClass("rank",       r.rank,       medians.rank),       "Nat'l Rank",       fmt.rank(r.rank)) +
+        cell(colorClass("totalScore", r.totalScore, medians.totalScore), "Total Score",      fmt.int(r.totalScore)) +
+        cell("perf-neutral",                                              "Est. Blended Wage", fmt.dollars2(r.blendedWage) + "/hr") +
+      '</div>' +
     '</div>'
   )).join("");
   return (
@@ -1607,7 +1509,7 @@ function buildPayload(){
 
   const payload = {
     submittedAt: new Date().toISOString(),
-    formVersion: "1.13",
+    formVersion: "1.14",
 
     // ----- routing fields (auto-populated from store directory; used by Zapier email step) -----
     store:             store,
@@ -1722,60 +1624,45 @@ function buildEmailHtml(p){
 
   // ----- Performance block helpers -----
   const perf = p.performance || null;
+
+  // Email-safe inline-styled cell. Color is "good" | "bad" | "neutral".
+  // Each card uses a 3-column table that auto-reflows in Outlook desktop
+  // and mobile clients without needing media queries.
+  const palettes = {
+    good:    { bg: "#F0FDF4", border: "#BBF7D0", val: "#15803D" },
+    bad:     { bg: "#FEF2F2", border: "#FECACA", val: "#B91C1C" },
+    neutral: { bg: "#F8FAFC", border: "#E2E8F0", val: "#1E293B" }
+  };
   const cellHtml = (label, value, color) => {
-    // color is "good" | "bad" | "neutral"; maps to email-safe inline styles.
-    const palettes = {
-      good:    { bg: "#F0FDF4", border: "#BBF7D0", val: "#15803D" },
-      bad:     { bg: "#FEF2F2", border: "#FECACA", val: "#B91C1C" },
-      neutral: { bg: "#F8FAFC", border: "#E2E8F0", val: "#1E293B" }
-    };
     const c = palettes[color] || palettes.neutral;
     return '<td valign="top" width="33%" style="padding:4px"><div style="background:' + c.bg + ';border:1px solid ' + c.border + ';border-radius:8px;padding:8px 10px;font-family:Helvetica,Arial,sans-serif">' +
       '<div style="font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:3px">' + esc(label) + '</div>' +
       '<div style="font-size:15px;font-weight:700;color:' + c.val + ';line-height:1.15">' + esc(value) + '</div>' +
     '</div></td>';
   };
-  const cellsGrid = (cells) => {
-    // 3 columns per row — best fit for the 600px email width on both
-    // Outlook desktop and mobile (no media queries needed, native table reflow).
-    const rows = [];
-    for(let i = 0; i < cells.length; i += 3){
-      const trio = cells.slice(i, i + 3);
-      while(trio.length < 3) trio.push('<td width="33%" style="padding:4px"></td>');
-      rows.push('<tr>' + trio.join("") + '</tr>');
-    }
-    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:6px">' + rows.join("") + '</table>';
+  const cellsRow = (cells) => {
+    const padded = cells.slice();
+    while(padded.length < 3) padded.push('<td width="33%" style="padding:4px"></td>');
+    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:6px"><tr>' + padded.join("") + '</tr></table>';
   };
-  const fmtDollars     = v => "$" + Math.round(Number(v) || 0).toLocaleString();
-  const fmtDollars2    = v => "$" + ((Number(v) || 0)).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
-  const fmtSignedD     = v => { const n = Number(v) || 0; return (n >= 0 ? "+" : "-") + "$" + Math.abs(Math.round(n)).toLocaleString(); };
-  const fmtPct         = v => { const n = Number(v) || 0; return (n <= 1 && n >= -1 ? n * 100 : n).toFixed(1) + "%"; };
-  const fmtPctRaw      = v => (Number(v) || 0).toFixed(1) + "%";
-  const fmtInt         = v => Math.round(Number(v) || 0).toLocaleString();
-  const fmtRank        = v => "#" + Math.round(Number(v) || 0);
+  const fmtDollars2 = v => "$" + ((Number(v) || 0)).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
+  const fmtInt      = v => Math.round(Number(v) || 0).toLocaleString();
+  const fmtRank     = v => "#" + Math.round(Number(v) || 0);
 
+  const colorFor = (field, value, med) => {
+    if(med == null || (med === 0 && value === 0)) return "neutral";
+    if(value == null || isNaN(value)) return "neutral";
+    const lowerBetter = (field === "rank");
+    return (lowerBetter ? value <= med : value >= med) ? "good" : "bad";
+  };
+
+  // Store card: National Rank + Total Score (the two weighted numbers).
   const buildStorePerfBlock = () => {
     if(!perf || !perf.store) return "";
     const s = perf.store;
     const cells = [
-      cellHtml("National Rank",  fmtRank(s.rank),         "neutral"),
-      cellHtml("GP $",           fmtDollars(s.gp),        "neutral"),
-      cellHtml("GP Trend",       fmtSignedD(s.gpTrend),   "neutral"),
-      cellHtml("Target",         fmtDollars(s.target),    "neutral"),
-      cellHtml("Var to Target",  fmtSignedD(s.varTarget), "neutral"),
-      cellHtml("GP / Day",       fmtDollars(s.gpPerDay),  "neutral"),
-      cellHtml("Mobile CR",      fmtPct(s.mobileCR),      "neutral"),
-      cellHtml("Fiscal CR",      fmtPct(s.fiscalCR),      "neutral"),
-      cellHtml("Fiscal NPS",     fmtPctRaw(s.nps),        "neutral"),
-      cellHtml("Plus Mix",       fmtPct(s.plusMix),       "neutral"),
-      cellHtml("Gig %",          fmtPct(s.gigPct),        "neutral"),
-      cellHtml("New-to-Upg",     fmtPct(s.newToUpg),      "neutral"),
-      cellHtml("Acc / Device",   fmtDollars2(s.accPerDev),"neutral"),
-      cellHtml("Mobile MTD",     fmtInt(s.mobileMTD),     "neutral"),
-      cellHtml("Tablet MTD",     fmtInt(s.tabletMTD),     "neutral"),
-      cellHtml("Watch MTD",      fmtInt(s.watchMTD),      "neutral"),
-      cellHtml("HSI",            fmtInt(s.hsi),           "neutral"),
-      cellHtml("Video Attach",   fmtPct(s.videoAttach),   "neutral")
+      cellHtml("National Rank", fmtRank(s.rank),        "neutral"),
+      cellHtml("Total Score",   fmtInt(s.totalScore),   "neutral")
     ];
     return '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:14px;margin-bottom:12px">' +
       '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
@@ -1783,32 +1670,16 @@ function buildEmailHtml(p){
         '<div style="font-size:11px;color:#64748B;margin-top:2px">' + esc(s.name) + (s.region ? ' &middot; ' + esc(s.region) : '') + '</div></td>' +
         '<td valign="middle" align="right"><span style="display:inline-block;background:#0F1F46;color:#FFFFFF;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700">National #' + Math.round(s.rank) + '</span></td>' +
       '</tr></table>' +
-      cellsGrid(cells) +
+      cellsRow(cells) +
     '</div>';
   };
 
-  const colorFor = (field, value, med) => {
-    if(med == null) return "neutral";
-    if(med === 0 && value === 0) return "neutral";
-    if(value == null || isNaN(value)) return "neutral";
-    const lowerBetter = (field === "rank");
-    const better = lowerBetter ? (value <= med) : (value >= med);
-    return better ? "good" : "bad";
-  };
-
+  // Rep card: National Rank (colored) + Total Score (colored) + Est. Blended Wage (neutral).
   const buildRepCard = (r, med) => {
     const cells = [
-      cellHtml("Nat'l Rank",   fmtRank(r.rank),         colorFor("rank",         r.rank,         med.rank)),
-      cellHtml("GP $",         fmtDollars(r.gp),        colorFor("gp",           r.gp,           med.gp)),
-      cellHtml("GP / HR",      fmtDollars2(r.gphr),     colorFor("gphr",         r.gphr,         med.gphr)),
-      cellHtml("Fiscal NPS",   fmtPctRaw(r.nps),        colorFor("nps",          r.nps,          med.nps)),
-      cellHtml("Plus Mix",     fmtPct(r.plusMix),       colorFor("plusMix",      r.plusMix,      med.plusMix)),
-      cellHtml("Gig %",        fmtPct(r.gigPct),        colorFor("gigPct",       r.gigPct,       med.gigPct)),
-      cellHtml("New-to-Upg",   fmtPct(r.newToUpg),      colorFor("newToUpg",     r.newToUpg,     med.newToUpg)),
-      cellHtml("Acc / Mobile", fmtDollars2(r.accPerMobile), colorFor("accPerMobile", r.accPerMobile, med.accPerMobile)),
-      cellHtml("Mobile MTD",   fmtInt(r.mobile),        colorFor("mobile",       r.mobile,       med.mobile)),
-      cellHtml("Tablet MTD",   fmtInt(r.tabletMTD),     colorFor("tabletMTD",    r.tabletMTD,    med.tabletMTD)),
-      cellHtml("Watch MTD",    fmtInt(r.watchMTD),      colorFor("watchMTD",     r.watchMTD,     med.watchMTD))
+      cellHtml("Nat'l Rank",        fmtRank(r.rank),                  colorFor("rank",       r.rank,       med.rank)),
+      cellHtml("Total Score",       fmtInt(r.totalScore),             colorFor("totalScore", r.totalScore, med.totalScore)),
+      cellHtml("Est. Blended Wage", fmtDollars2(r.blendedWage) + "/hr","neutral")
     ];
     return '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:14px;margin-bottom:10px">' +
       '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
@@ -1816,7 +1687,7 @@ function buildEmailHtml(p){
         '<div style="font-size:11px;color:#64748B;margin-top:2px">' + esc(r.title || "Rep") + (r.dm ? ' &middot; DM ' + esc(r.dm) : '') + '</div></td>' +
         '<td valign="middle" align="right"><span style="display:inline-block;background:#0F1F46;color:#FFFFFF;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700">National #' + Math.round(r.rank) + '</span></td>' +
       '</tr></table>' +
-      cellsGrid(cells) +
+      cellsRow(cells) +
     '</div>';
   };
 
