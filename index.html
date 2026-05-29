@@ -932,10 +932,11 @@ function parseStoreRank(wb){
   const iFiscalCR    = h.findIndex(c => /^Fiscal\s*Close\s*Rate$/i.test(c));
   // "Non Traditional CR" — non-traditional close rate
   const iNonTrad     = h.findIndex(c => /^Non\s*Traditional\s*CR$/i.test(c));
-  // "GIG Plans (≥180+ commissions plan) % … 10 Pts" — gig plan attach %
-  const iGigPct      = h.findIndex(c => /^GIG\s*Plans.*%.*10\s*Pts/i.test(c));
-  // "Mobile Plus Mix (%) … 5 Pts" — Mobile Plus attach
-  const iPlusMix     = h.findIndex(c => /Mobile\s*Plus\s*Mix.*5\s*Pts/i.test(c));
+  // "GIG Plans (≥180+ commissions plan) %\r\n10 Pts" — gig plan attach %
+  // (`.` doesn't cross newlines in JS regex without the `s` flag, hence [\s\S]*)
+  const iGigPct      = h.findIndex(c => /^GIG\s*Plans[\s\S]*%[\s\S]*10\s*Pts/i.test(c));
+  // "Mobile Plus Mix (%)\r\n5 Pts" — Mobile Plus attach
+  const iPlusMix     = h.findIndex(c => /Mobile\s*Plus\s*Mix[\s\S]*5\s*Pts/i.test(c));
   // "NEW TO UPGR % … 5 Pts"
   const iNewToUpg    = h.findIndex(c => /NEW\s*TO\s*UPGR\s*%/i.test(c));
   // "Accessory $ per Device (Net) 10 Pts" — net acc dollars per device sold
@@ -996,10 +997,11 @@ function parseRepRank(wb, allowedStoresLower){
   const iDM     = h.findIndex(c => c.trim().toLowerCase() === "dm");
   // "GP $\r\n25 Pts" — gross profit dollars
   const iGP          = h.findIndex(c => /^GP\s*\$/i.test(c));
-  // "Mobile Plus Mix (%) 5 Pts" — Plus attach
-  const iPlusMix     = h.findIndex(c => /Mobile\s*Plus\s*Mix.*5\s*Pts/i.test(c));
-  // "GIG Plans (≥180+ commissions plan) %" — gig attach
-  const iGigPct      = h.findIndex(c => /^GIG\s*Plans.*%$/i.test(c) || /GIG\s*Plans.*commissions\s*plan\)\s*%$/i.test(c));
+  // "Mobile Plus Mix (%)\r\n5 Pts" — Plus attach (`.` doesn't cross newlines,
+  // so use [\s\S]* for the `\r\n` gap between "%)" and "5 Pts")
+  const iPlusMix     = h.findIndex(c => /Mobile\s*Plus\s*Mix[\s\S]*5\s*Pts/i.test(c));
+  // "GIG Plans (≥180+ commissions plan) %" — gig attach (ends with %, no Pts)
+  const iGigPct      = h.findIndex(c => /^GIG\s*Plans[\s\S]*commissions\s*plan\)\s*%$/i.test(c));
   // Device counts
   const iMobile      = h.findIndex(c => /^Mobile\s*MTD$/i.test(c));
   const iTabletMTD   = h.findIndex(c => /^Tablet\s*MTD$/i.test(c));
