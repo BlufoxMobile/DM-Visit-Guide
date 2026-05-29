@@ -126,33 +126,66 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
 /* =========================================================================
    Sales-report performance panels (store + reps)
+   Layout mirrors the daily sales dashboard: dark header card for the store
+   with device-total + colored metric tiles, then a single-line rep table.
    ========================================================================= */
 .perf-panel{margin-top:14px;display:none}
 .perf-panel.show{display:block}
 .perf-panel .perf-loading{padding:14px 16px;background:#F8FAFC;border:1px dashed #CBD5E1;border-radius:10px;font-size:13px;color:#64748B;text-align:center}
 .perf-panel .perf-error{padding:12px 14px;background:#FEF2F2;border:1px solid #FECACA;border-radius:10px;font-size:13px;color:#991B1B}
-.perf-card{background:#FFFFFF;border:1px solid var(--border);border-radius:12px;padding:14px 14px 12px;margin-top:10px;box-shadow:0 1px 2px rgba(15,31,70,.04)}
-.perf-card-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px;margin-bottom:10px}
-.perf-card-title{font-size:13px;font-weight:700;color:var(--brand);text-transform:uppercase;letter-spacing:.04em}
-.perf-card-sub{font-size:11px;color:var(--muted);font-weight:500}
-.perf-card-rank{background:var(--brand);color:#fff;border-radius:999px;padding:3px 10px;font-size:11px;font-weight:700;letter-spacing:.02em;white-space:nowrap}
-.perf-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));gap:8px}
-.perf-cell{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:8px 10px}
-.perf-cell .perf-label{font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:3px;line-height:1.2}
-.perf-cell .perf-val{font-size:15px;font-weight:700;color:#1E293B;line-height:1.15}
-.perf-cell.perf-good .perf-val{color:#15803D}
-.perf-cell.perf-good{background:#F0FDF4;border-color:#BBF7D0}
-.perf-cell.perf-bad  .perf-val{color:#B91C1C}
-.perf-cell.perf-bad{background:#FEF2F2;border-color:#FECACA}
-.perf-cell.perf-neutral .perf-val{color:#475569}
-.perf-section-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin:12px 0 6px}
-.perf-rep-meta{font-size:11px;color:var(--muted);margin-bottom:8px}
-.perf-rep-meta b{color:#1E293B;font-weight:600}
+
+/* ----- Store card ----- */
+.perf-store{background:#FFFFFF;border:1px solid var(--border);border-radius:12px;overflow:hidden;box-shadow:0 1px 2px rgba(15,31,70,.04)}
+.perf-store-head{background:linear-gradient(135deg,#0F1F46 0%,#1E3A8A 100%);color:#fff;padding:14px 16px;position:relative}
+.perf-store-rank{display:inline-block;background:#F97316;color:#fff;font-size:11px;font-weight:800;letter-spacing:.04em;padding:3px 10px;border-radius:6px;margin-bottom:6px}
+.perf-store-name{font-size:22px;font-weight:700;line-height:1.1;margin-bottom:4px}
+.perf-store-sub{font-size:11px;color:#BFDBFE;opacity:.9;margin-bottom:8px}
+.perf-store-gp{font-size:26px;font-weight:800;color:#F97316;line-height:1}
+.perf-store-gp-lbl{font-size:10px;color:#fff;opacity:.7;letter-spacing:.06em;font-weight:600;margin-left:4px}
+
+/* ----- Tile rows (device totals + metric grid) ----- */
+.perf-tiles-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 10px 6px}
+.perf-tiles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 10px 12px}
+.perf-tile{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:8px 10px;text-align:left;min-width:0}
+.perf-tile-label{font-size:9px;color:#64748B;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:4px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.perf-tile-val{font-size:18px;font-weight:800;color:#1E293B;line-height:1.05}
+.perf-tile.perf-good{background:#F0FDF4;border-color:#BBF7D0}
+.perf-tile.perf-good .perf-tile-val{color:#15803D}
+.perf-tile.perf-bad{background:#FEF2F2;border-color:#FECACA}
+.perf-tile.perf-bad .perf-tile-val{color:#B91C1C}
+.perf-tile.perf-neutral .perf-tile-val{color:#1E293B}
+
+/* ----- Rep table ----- */
+.perf-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:10px;background:#fff;box-shadow:0 1px 2px rgba(15,31,70,.04)}
+.perf-table{width:100%;border-collapse:collapse;font-size:12px;min-width:560px}
+.perf-table thead{background:#0F1F46;color:#fff}
+.perf-table th{padding:8px 6px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;white-space:nowrap}
+.perf-table th:first-child{padding-left:12px}
+.perf-table th:last-child{padding-right:12px;text-align:right}
+.perf-table tbody tr{border-top:1px solid #F1F5F9}
+.perf-table tbody tr:nth-child(even){background:#F8FAFC}
+.perf-table td{padding:6px;font-weight:600;color:#1E293B;white-space:nowrap}
+.perf-table td:first-child{padding-left:12px;color:#1D4ED8;font-weight:700}
+.perf-table td:last-child{padding-right:12px;text-align:right}
+.perf-table .perf-name{font-weight:700;color:#0F1F46}
+.perf-table .perf-num{font-variant-numeric:tabular-nums}
+.perf-table td.perf-good{color:#15803D}
+.perf-table td.perf-bad{color:#B91C1C}
+.perf-table td.perf-neutral{color:#1E293B}
+
+/* ----- Section labels ----- */
+.perf-section-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin:14px 0 6px}
 .perf-footnote{font-size:10px;color:#94A3B8;margin-top:8px;font-style:italic}
+
 @media (max-width: 480px){
-  .perf-grid{grid-template-columns:repeat(auto-fit,minmax(96px,1fr));gap:6px}
-  .perf-cell{padding:6px 8px}
-  .perf-cell .perf-val{font-size:14px}
+  .perf-store-name{font-size:18px}
+  .perf-store-gp{font-size:22px}
+  .perf-tiles-row{grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 8px 4px}
+  .perf-tiles-grid{grid-template-columns:repeat(3,1fr);gap:4px;padding:4px 8px 10px}
+  .perf-tile{padding:6px 8px}
+  .perf-tile-val{font-size:15px}
+  .perf-tile-label{font-size:8px}
+  .perf-table{font-size:11px;min-width:560px}
 }
 
 /* Submit area */
@@ -439,7 +472,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
   </form>
 
-  <div class="foot">DM Store Visit Guide · v1.14</div>
+  <div class="foot">DM Store Visit Guide · v1.15</div>
 </div>
 
 <script>
@@ -881,15 +914,40 @@ function parseStoreRank(wb){
   if(hr < 0) return [];
   const h = rows[hr].map(c => c == null ? "" : String(c).trim());
 
-  const iRank      = h.findIndex(c => c.trim() === "Rank");
-  const iRegion    = hi(h, "region");
-  const iStore     = hi(h, "store");
-  const iRSD       = hi(h, "rsd");
-  const iDM        = h.findIndex(c => c.trim().toLowerCase() === "dm");
-  const iSM        = h.findIndex(c => c.trim().toLowerCase() === "sm");
-  // "Total Score" is the weighted composite score that drives the national rank.
-  // This is the single number we surface on the simplified visit-guide panel.
-  const iTotalScore = h.findIndex(c => /^total\s*score/i.test(c));
+  // Column mappings reverse-engineered from the daily-sales-report dashboard
+  // and verified against today's Sales Report.xlsx. The headers are exact
+  // matches (case-insensitive) so a column rename in the spreadsheet would
+  // surface here as `-1`, not a silent wrong-column read.
+  const iRank        = h.findIndex(c => c.trim() === "Rank");
+  const iRegion      = hi(h, "region");
+  const iStore       = hi(h, "store");
+  const iRSD         = hi(h, "rsd");
+  const iDM          = h.findIndex(c => c.trim().toLowerCase() === "dm");
+  const iSM          = h.findIndex(c => c.trim().toLowerCase() === "sm");
+  // "GP $ Trend" — projected GP for the month
+  const iGPTrend     = h.findIndex(c => /^GP\s*\$\s*Trend$/i.test(c));
+  // "Mobile Close rate" (the dashboard's "MOB CLOSE RATE")
+  const iMobCR       = h.findIndex(c => /^Mobile\s*Close\s*rate$/i.test(c));
+  // "Fiscal Close Rate" (the dashboard's "FISCAL CR")
+  const iFiscalCR    = h.findIndex(c => /^Fiscal\s*Close\s*Rate$/i.test(c));
+  // "Non Traditional CR" — non-traditional close rate
+  const iNonTrad     = h.findIndex(c => /^Non\s*Traditional\s*CR$/i.test(c));
+  // "GIG Plans (≥180+ commissions plan) % … 10 Pts" — gig plan attach %
+  const iGigPct      = h.findIndex(c => /^GIG\s*Plans.*%.*10\s*Pts/i.test(c));
+  // "Mobile Plus Mix (%) … 5 Pts" — Mobile Plus attach
+  const iPlusMix     = h.findIndex(c => /Mobile\s*Plus\s*Mix.*5\s*Pts/i.test(c));
+  // "NEW TO UPGR % … 5 Pts"
+  const iNewToUpg    = h.findIndex(c => /NEW\s*TO\s*UPGR\s*%/i.test(c));
+  // "Accessory $ per Device (Net) 10 Pts" — net acc dollars per device sold
+  const iAccPerDev   = h.findIndex(c => /Accessory.*per\s*Device.*Net/i.test(c));
+  // "Fiscal NPS"
+  const iNPS         = h.findIndex(c => /^Fiscal\s*NPS$/i.test(c));
+  // "NEW RGU" — the dashboard's "TOTAL RGU" tile (not the "NEW RGU Trend" col)
+  const iNewRGU      = h.findIndex(c => /^NEW\s*RGU$/i.test(c));
+  const iMobileMTD   = h.findIndex(c => /^Mobile\s*MTD$/i.test(c));
+  const iTabletMTD   = h.findIndex(c => /^Tablet\s*MTD$/i.test(c));
+  const iWatchMTD    = h.findIndex(c => /^Watches\s*MTD$/i.test(c));
+  const iTotalScore  = h.findIndex(c => /^total\s*score/i.test(c));
 
   const out = [];
   for(let i = hr + 1; i < rows.length; i++){
@@ -903,6 +961,19 @@ function parseStoreRank(wb){
       name:       r[iStore]  || "",
       dm:         r[iDM] || "",
       sm:         r[iSM] || "",
+      gpTrend:    iGPTrend    >= 0 ? num(r[iGPTrend])    : 0,
+      mobileCR:   iMobCR      >= 0 ? num(r[iMobCR])      : 0,
+      fiscalCR:   iFiscalCR   >= 0 ? num(r[iFiscalCR])   : 0,
+      nonTrad:    iNonTrad    >= 0 ? num(r[iNonTrad])    : 0,
+      gigPct:     iGigPct     >= 0 ? num(r[iGigPct])     : 0,
+      plusMix:    iPlusMix    >= 0 ? num(r[iPlusMix])    : 0,
+      newToUpg:   iNewToUpg   >= 0 ? num(r[iNewToUpg])   : 0,
+      accPerDev:  iAccPerDev  >= 0 ? num(r[iAccPerDev])  : 0,
+      nps:        iNPS        >= 0 ? num(r[iNPS])        : 0,
+      newRGU:     iNewRGU     >= 0 ? num(r[iNewRGU])     : 0,
+      mobileMTD:  iMobileMTD  >= 0 ? num(r[iMobileMTD])  : 0,
+      tabletMTD:  iTabletMTD  >= 0 ? num(r[iTabletMTD])  : 0,
+      watchMTD:   iWatchMTD   >= 0 ? num(r[iWatchMTD])   : 0,
       totalScore: iTotalScore >= 0 ? num(r[iTotalScore]) : 0
     });
   }
@@ -923,10 +994,19 @@ function parseRepRank(wb, allowedStoresLower){
   const iTitle  = h.findIndex(c => c.toLowerCase().includes("title"));
   const iLoc    = h.findIndex(c => c.toLowerCase().includes("location"));
   const iDM     = h.findIndex(c => c.trim().toLowerCase() === "dm");
-  // "Total Score" = the weighted composite score the national rank is derived from.
-  const iTotalScore  = h.findIndex(c => /^total\s*score/i.test(c));
-  // "Blended Wage\r\nESTIMATE ONLY" — comp/hr the rep is currently earning.
+  // "GP $\r\n25 Pts" — gross profit dollars
+  const iGP          = h.findIndex(c => /^GP\s*\$/i.test(c));
+  // "Mobile Plus Mix (%) 5 Pts" — Plus attach
+  const iPlusMix     = h.findIndex(c => /Mobile\s*Plus\s*Mix.*5\s*Pts/i.test(c));
+  // "GIG Plans (≥180+ commissions plan) %" — gig attach
+  const iGigPct      = h.findIndex(c => /^GIG\s*Plans.*%$/i.test(c) || /GIG\s*Plans.*commissions\s*plan\)\s*%$/i.test(c));
+  // Device counts
+  const iMobile      = h.findIndex(c => /^Mobile\s*MTD$/i.test(c));
+  const iTabletMTD   = h.findIndex(c => /^Tablet\s*MTD$/i.test(c));
+  const iWatchMTD    = h.findIndex(c => /^Watches\s*MTD$/i.test(c));
+  // Blended Wage (the column header is literally "Blended Wage\r\nESTIMATE ONLY")
   const iBlendedWage = h.findIndex(c => /blended\s*wage/i.test(c));
+  const iTotalScore  = h.findIndex(c => /^total\s*score/i.test(c));
 
   const allowed = (allowedStoresLower && allowedStoresLower.length)
     ? new Set(allowedStoresLower)
@@ -944,8 +1024,14 @@ function parseRepRank(wb, allowedStoresLower){
       title:       r[iTitle] || "",
       store:       r[iLoc]   || "",
       dm:          r[iDM]    || "",
-      totalScore:  iTotalScore  >= 0 ? num(r[iTotalScore])  : 0,
-      blendedWage: iBlendedWage >= 0 ? num(r[iBlendedWage]) : 0
+      gp:          iGP          >= 0 ? num(r[iGP])          : 0,
+      plusMix:     iPlusMix     >= 0 ? num(r[iPlusMix])     : 0,
+      gigPct:      iGigPct      >= 0 ? num(r[iGigPct])      : 0,
+      mobile:      iMobile      >= 0 ? num(r[iMobile])      : 0,
+      tabletMTD:   iTabletMTD   >= 0 ? num(r[iTabletMTD])   : 0,
+      watchMTD:    iWatchMTD    >= 0 ? num(r[iWatchMTD])    : 0,
+      blendedWage: iBlendedWage >= 0 ? num(r[iBlendedWage]) : 0,
+      totalScore:  iTotalScore  >= 0 ? num(r[iTotalScore])  : 0
     });
   }
   return out;
@@ -961,31 +1047,49 @@ function median(arr){
   return sorted.length % 2 ? sorted[mid] : (sorted[mid - 1] + sorted[mid]) / 2;
 }
 
-/* Build a {metric: median} map across ALL reps so each rep cell can be
-   colored green (≥ median = top 50%) or red (< median = bottom 50%).
-   We only color what's actually shown: rank + totalScore. Wage stays neutral. */
+/* Medians across the whole peer set so each cell can be colored
+   green (top 50%) or red (bottom 50%). Two maps:
+     - store-level medians use all 24 stores in the RSD
+     - rep-level medians use all ~150 reps in the RSD */
+function buildStoreMedians(stores){
+  return {
+    gpTrend:   median(stores.map(s => s.gpTrend)),
+    mobileCR:  median(stores.map(s => s.mobileCR)),
+    fiscalCR:  median(stores.map(s => s.fiscalCR)),
+    nonTrad:   median(stores.map(s => s.nonTrad)),
+    gigPct:    median(stores.map(s => s.gigPct)),
+    plusMix:   median(stores.map(s => s.plusMix)),
+    newToUpg:  median(stores.map(s => s.newToUpg)),
+    accPerDev: median(stores.map(s => s.accPerDev)),
+    nps:       median(stores.map(s => s.nps))
+  };
+}
 function buildRepMedians(reps){
   return {
-    rank:       median(reps.map(r => r.rank)),
-    totalScore: median(reps.map(r => r.totalScore))
+    gp:      median(reps.map(r => r.gp)),
+    plusMix: median(reps.map(r => r.plusMix)),
+    gigPct:  median(reps.map(r => r.gigPct))
   };
 }
 
-/* For most metrics higher = better. For `rank` it's inverted (lower = better). */
-const REP_LOWER_IS_BETTER = new Set(["rank"]);
+/* For most metrics higher = better. Empty until we add a "lower is better"
+   field (rank is no longer color-coded inline in the new layout). */
+const LOWER_IS_BETTER = new Set();
 function colorClass(field, value, med){
   if(med == null || (med === 0 && value === 0)) return "perf-neutral";
   if(value == null || isNaN(value))             return "perf-neutral";
-  const better = REP_LOWER_IS_BETTER.has(field) ? (value <= med) : (value >= med);
+  const better = LOWER_IS_BETTER.has(field) ? (value <= med) : (value >= med);
   return better ? "perf-good" : "perf-bad";
 }
 
 /* ----- Formatting helpers ----- */
 const fmt = {
-  dollars:   v => "$" + Math.round(v).toLocaleString(),
+  dollars:   v => "$" + Math.round(Number(v) || 0).toLocaleString(),
   dollars2:  v => "$" + (Number(v) || 0).toLocaleString(undefined, {minimumFractionDigits: 2, maximumFractionDigits: 2}),
-  int:       v => Math.round(v).toLocaleString(),
-  rank:      v => "#" + Math.round(v)
+  int:       v => Math.round(Number(v) || 0).toLocaleString(),
+  rank:      v => "#" + Math.round(Number(v) || 0),
+  // Percent: data is stored as a decimal (0.082 = 8.2%). Multiply if ≤ 1.
+  pct:       v => { const n = Number(v) || 0; return (n <= 1 && n >= -1 ? n * 100 : n).toFixed(1) + "%"; }
 };
 
 /* Render the two cards (store summary + rep coaching) under the store picker. */
@@ -1015,68 +1119,98 @@ async function renderPerformancePanels(displayStoreName){
   if(!store){
     storeEl.innerHTML = '<div class="perf-error">No row found for <b>' + escapeHTML(displayStoreName) + '</b> in today\'s Sales Report (looked for "' + escapeHTML(toSalesStoreName(displayStoreName)) + '").</div>';
   } else {
-    storeEl.innerHTML = renderStoreCard(store);
+    storeEl.innerHTML = renderStoreCard(store, buildStoreMedians(data.stores));
   }
 
   if(!reps.length){
     repEl.innerHTML = '<div class="perf-error">No reps listed for this store in today\'s Sales Report.</div>';
   } else {
-    const medians = buildRepMedians(data.reps);
-    repEl.innerHTML = renderRepCards(reps, medians);
+    repEl.innerHTML = renderRepTable(reps, buildRepMedians(data.reps));
   }
 }
 
-function renderStoreCard(s){
-  // Two cells only: the weighted national rank and the weighted Total Score
-  // that drives it. Everything else lives in the sales-report dashboard.
-  const cells =
-    '<div class="perf-cell perf-neutral"><div class="perf-label">National Rank</div>' +
-      '<div class="perf-val">' + escapeHTML(fmt.rank(s.rank)) + '</div></div>' +
-    '<div class="perf-cell perf-neutral"><div class="perf-label">Total Score</div>' +
-      '<div class="perf-val">' + escapeHTML(fmt.int(s.totalScore)) + '</div></div>';
+/* Store card — laid out like the daily-sales-report dashboard:
+   - dark header with rank + store name + big GP Trend
+   - row of 4 device-total tiles (Total RGU, Mobile, Tablet, Watches)
+   - 3x3 grid of colored metric tiles (GP Trend, Mob CR, Fiscal CR, ...) */
+function renderStoreCard(s, med){
+  const subBits = [s.region, s.sm ? "SM: " + s.sm : null, s.dm ? "DM: " + s.dm : null].filter(Boolean);
+  const tile = (label, val, cls) =>
+    '<div class="perf-tile ' + (cls || "perf-neutral") + '">' +
+      '<div class="perf-tile-label">' + label + '</div>' +
+      '<div class="perf-tile-val">' + escapeHTML(val) + '</div>' +
+    '</div>';
+  const metric = (label, val, field, raw) =>
+    tile(label, val, colorClass(field, raw, med[field]));
+
   return (
-    '<div class="perf-card">' +
-      '<div class="perf-card-head">' +
-        '<div>' +
-          '<div class="perf-card-title">Store Performance · Today</div>' +
-          '<div class="perf-card-sub">' + escapeHTML(s.name) +
-            (s.region ? ' · ' + escapeHTML(s.region) : '') + '</div>' +
+    '<div class="perf-store">' +
+      '<div class="perf-store-head">' +
+        '<div class="perf-store-rank">RANK #' + Math.round(s.rank) + '</div>' +
+        '<div class="perf-store-name">' + escapeHTML(s.name) + '</div>' +
+        (subBits.length ? '<div class="perf-store-sub">' + escapeHTML(subBits.join(" · ")) + '</div>' : '') +
+        '<div class="perf-store-gp">' + escapeHTML(fmt.dollars(s.gpTrend)) +
+          '<span class="perf-store-gp-lbl"> GP TREND</span>' +
         '</div>' +
-        '<div class="perf-card-rank">National #' + Math.round(s.rank) + '</div>' +
       '</div>' +
-      '<div class="perf-grid">' + cells + '</div>' +
+      '<div class="perf-tiles-row">' +
+        tile("TOTAL RGU", fmt.int(s.newRGU)) +
+        tile("MOBILE",    fmt.int(s.mobileMTD)) +
+        tile("TABLET",    fmt.int(s.tabletMTD)) +
+        tile("WATCHES",   fmt.int(s.watchMTD)) +
+      '</div>' +
+      '<div class="perf-tiles-grid">' +
+        metric("GP TREND",       fmt.dollars(s.gpTrend), "gpTrend",   s.gpTrend) +
+        metric("MOB CLOSE RATE", fmt.pct(s.mobileCR),    "mobileCR",  s.mobileCR) +
+        metric("FISCAL CR",      fmt.pct(s.fiscalCR),    "fiscalCR",  s.fiscalCR) +
+        metric("NON-TRAD",       fmt.pct(s.nonTrad),     "nonTrad",   s.nonTrad) +
+        metric("GIG PLANS %",    fmt.pct(s.gigPct),      "gigPct",    s.gigPct) +
+        metric("PLUS MIX",       fmt.pct(s.plusMix),     "plusMix",   s.plusMix) +
+        metric("NEW → UPGRADE",  fmt.pct(s.newToUpg),    "newToUpg",  s.newToUpg) +
+        metric("ACCESSORIES",    "$" + Math.round(s.accPerDev), "accPerDev", s.accPerDev) +
+        metric("NPS",            fmt.pct(s.nps),         "nps",       s.nps) +
+      '</div>' +
     '</div>'
   );
 }
 
-function renderRepCards(reps, medians){
-  // Three cells per rep: National Rank (colored), Total Score (colored),
-  // Est. Blended Wage (neutral — informational, not a coaching signal).
-  const cell = (cls, label, val) =>
-    '<div class="perf-cell ' + cls + '">' +
-      '<div class="perf-label">' + label + '</div>' +
-      '<div class="perf-val">' + escapeHTML(val) + '</div>' +
-    '</div>';
-  const cards = reps.map(r => (
-    '<div class="perf-card">' +
-      '<div class="perf-card-head">' +
-        '<div>' +
-          '<div class="perf-card-title">' + escapeHTML(r.name || "Unnamed") + '</div>' +
-          '<div class="perf-card-sub">' + escapeHTML(r.title || "Rep") +
-            (r.dm ? ' · DM ' + escapeHTML(r.dm) : '') + '</div>' +
-        '</div>' +
-        '<div class="perf-card-rank">National #' + Math.round(r.rank) + '</div>' +
-      '</div>' +
-      '<div class="perf-grid">' +
-        cell(colorClass("rank",       r.rank,       medians.rank),       "Nat'l Rank",       fmt.rank(r.rank)) +
-        cell(colorClass("totalScore", r.totalScore, medians.totalScore), "Total Score",      fmt.int(r.totalScore)) +
-        cell("perf-neutral",                                              "Est. Blended Wage", fmt.dollars2(r.blendedWage) + "/hr") +
-      '</div>' +
-    '</div>'
+/* Rep table — single-line rows mirroring the dashboard's Team Members table.
+   Columns: NAT'L #, REP NAME, GP $, PLUS %, GIG %, XM, TAB, WATCH, EST. WAGE.
+   PLUS % and GIG % are color-coded against the median of all reps in the RSD.
+   Wrap is horizontally scrollable on narrow viewports. */
+function renderRepTable(reps, med){
+  const cls = (field, val) => "perf-num " + colorClass(field, val, med[field]);
+  const rows = reps.map(r => (
+    '<tr>' +
+      '<td class="perf-num">' + escapeHTML(fmt.rank(r.rank)) + '</td>' +
+      '<td class="perf-name">' + escapeHTML(r.name || "Unnamed") + '</td>' +
+      '<td class="' + cls("gp", r.gp) + '">' + escapeHTML(fmt.dollars(r.gp)) + '</td>' +
+      '<td class="' + cls("plusMix", r.plusMix) + '">' + escapeHTML(fmt.pct(r.plusMix)) + '</td>' +
+      '<td class="' + cls("gigPct",  r.gigPct)  + '">' + escapeHTML(fmt.pct(r.gigPct)) + '</td>' +
+      '<td class="perf-num">' + escapeHTML(fmt.int(r.mobile))    + '</td>' +
+      '<td class="perf-num">' + escapeHTML(fmt.int(r.tabletMTD)) + '</td>' +
+      '<td class="perf-num">' + escapeHTML(fmt.int(r.watchMTD))  + '</td>' +
+      '<td class="perf-num">' + escapeHTML(fmt.dollars2(r.blendedWage)) + '</td>' +
+    '</tr>'
   )).join("");
   return (
-    '<div class="perf-section-label">Reps at this store (' + reps.length + ') — green = top 50% of all reps, red = bottom 50%</div>' +
-    cards +
+    '<div class="perf-section-label">Team Members (' + reps.length + ') — GP $ / Plus % / Gig % colored green = top 50% of all reps, red = bottom 50%</div>' +
+    '<div class="perf-table-wrap">' +
+      '<table class="perf-table">' +
+        '<thead><tr>' +
+          '<th>NAT\'L #</th>' +
+          '<th>REP NAME</th>' +
+          '<th>GP $</th>' +
+          '<th>PLUS %</th>' +
+          '<th>GIG %</th>' +
+          '<th>XM</th>' +
+          '<th>TAB</th>' +
+          '<th>WATCH</th>' +
+          '<th>EST. WAGE</th>' +
+        '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>' +
+    '</div>' +
     '<div class="perf-footnote">Source: Sales Report.xlsx · pulled ' +
       escapeHTML(salesData.loadedAt ? salesData.loadedAt.toLocaleString() : "just now") +
     '</div>'
@@ -1093,10 +1227,11 @@ function getStorePerformanceSnapshot(displayStoreName){
                               .sort((a, b) => a.rank - b.rank);
   if(!store && !reps.length) return null;
   return {
-    pulledAt: salesData.loadedAt ? salesData.loadedAt.toISOString() : null,
-    store: store || null,
-    reps:  reps,
-    repMedians: buildRepMedians(salesData.reps)
+    pulledAt:     salesData.loadedAt ? salesData.loadedAt.toISOString() : null,
+    store:        store || null,
+    reps:         reps,
+    storeMedians: buildStoreMedians(salesData.stores),
+    repMedians:   buildRepMedians(salesData.reps)
   };
 }
 
@@ -1509,7 +1644,7 @@ function buildPayload(){
 
   const payload = {
     submittedAt: new Date().toISOString(),
-    formVersion: "1.14",
+    formVersion: "1.15",
 
     // ----- routing fields (auto-populated from store directory; used by Zapier email step) -----
     store:             store,
@@ -1623,81 +1758,117 @@ function buildEmailHtml(p){
   const has = (k) => ph[k] && ph[k].length > 0;
 
   // ----- Performance block helpers -----
+  // Email layout mirrors the on-screen panel: dark store header with device
+  // tiles + colored metric tiles, then a compact rep table. Inline styles
+  // and table-based layout for maximum Outlook (desktop + mobile) compat.
   const perf = p.performance || null;
-
-  // Email-safe inline-styled cell. Color is "good" | "bad" | "neutral".
-  // Each card uses a 3-column table that auto-reflows in Outlook desktop
-  // and mobile clients without needing media queries.
   const palettes = {
     good:    { bg: "#F0FDF4", border: "#BBF7D0", val: "#15803D" },
     bad:     { bg: "#FEF2F2", border: "#FECACA", val: "#B91C1C" },
     neutral: { bg: "#F8FAFC", border: "#E2E8F0", val: "#1E293B" }
   };
-  const cellHtml = (label, value, color) => {
-    const c = palettes[color] || palettes.neutral;
-    return '<td valign="top" width="33%" style="padding:4px"><div style="background:' + c.bg + ';border:1px solid ' + c.border + ';border-radius:8px;padding:8px 10px;font-family:Helvetica,Arial,sans-serif">' +
-      '<div style="font-size:10px;color:#64748B;text-transform:uppercase;letter-spacing:.04em;font-weight:600;margin-bottom:3px">' + esc(label) + '</div>' +
-      '<div style="font-size:15px;font-weight:700;color:' + c.val + ';line-height:1.15">' + esc(value) + '</div>' +
-    '</div></td>';
-  };
-  const cellsRow = (cells) => {
-    const padded = cells.slice();
-    while(padded.length < 3) padded.push('<td width="33%" style="padding:4px"></td>');
-    return '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:6px"><tr>' + padded.join("") + '</tr></table>';
-  };
+  const fmtDollars  = v => "$" + Math.round(Number(v) || 0).toLocaleString();
   const fmtDollars2 = v => "$" + ((Number(v) || 0)).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2});
   const fmtInt      = v => Math.round(Number(v) || 0).toLocaleString();
   const fmtRank     = v => "#" + Math.round(Number(v) || 0);
-
+  const fmtPct      = v => { const n = Number(v) || 0; return (n <= 1 && n >= -1 ? n * 100 : n).toFixed(1) + "%"; };
   const colorFor = (field, value, med) => {
     if(med == null || (med === 0 && value === 0)) return "neutral";
     if(value == null || isNaN(value)) return "neutral";
-    const lowerBetter = (field === "rank");
-    return (lowerBetter ? value <= med : value >= med) ? "good" : "bad";
+    return (value >= med) ? "good" : "bad";
+  };
+  const tileTd = (label, value, color, widthPct) => {
+    const c = palettes[color] || palettes.neutral;
+    return '<td valign="top" width="' + widthPct + '%" style="padding:3px">' +
+      '<div style="background:' + c.bg + ';border:1px solid ' + c.border + ';border-radius:6px;padding:6px 8px;font-family:Helvetica,Arial,sans-serif">' +
+        '<div style="font-size:9px;color:#64748B;text-transform:uppercase;letter-spacing:.04em;font-weight:700;margin-bottom:3px;line-height:1.1">' + esc(label) + '</div>' +
+        '<div style="font-size:16px;font-weight:800;color:' + c.val + ';line-height:1.05">' + esc(value) + '</div>' +
+      '</div></td>';
   };
 
-  // Store card: National Rank + Total Score (the two weighted numbers).
+  // Store block: dark header + 4-tile device row + 3x3 colored metric grid.
   const buildStorePerfBlock = () => {
     if(!perf || !perf.store) return "";
-    const s = perf.store;
-    const cells = [
-      cellHtml("National Rank", fmtRank(s.rank),        "neutral"),
-      cellHtml("Total Score",   fmtInt(s.totalScore),   "neutral")
+    const s   = perf.store;
+    const med = perf.storeMedians || {};
+    const subBits = [s.region, s.sm ? "SM: " + s.sm : null, s.dm ? "DM: " + s.dm : null].filter(Boolean);
+    const deviceRow = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px"><tr>' +
+      tileTd("TOTAL RGU", fmtInt(s.newRGU),    "neutral", 25) +
+      tileTd("MOBILE",    fmtInt(s.mobileMTD), "neutral", 25) +
+      tileTd("TABLET",    fmtInt(s.tabletMTD), "neutral", 25) +
+      tileTd("WATCHES",   fmtInt(s.watchMTD),  "neutral", 25) +
+    '</tr></table>';
+    const metricCells = [
+      ["GP TREND",      fmtDollars(s.gpTrend), colorFor("gpTrend",   s.gpTrend,   med.gpTrend)],
+      ["MOB CR",        fmtPct(s.mobileCR),    colorFor("mobileCR",  s.mobileCR,  med.mobileCR)],
+      ["FISCAL CR",     fmtPct(s.fiscalCR),    colorFor("fiscalCR",  s.fiscalCR,  med.fiscalCR)],
+      ["NON-TRAD",      fmtPct(s.nonTrad),     colorFor("nonTrad",   s.nonTrad,   med.nonTrad)],
+      ["GIG PLANS %",   fmtPct(s.gigPct),      colorFor("gigPct",    s.gigPct,    med.gigPct)],
+      ["PLUS MIX",      fmtPct(s.plusMix),     colorFor("plusMix",   s.plusMix,   med.plusMix)],
+      ["NEW->UPGRADE",  fmtPct(s.newToUpg),    colorFor("newToUpg",  s.newToUpg,  med.newToUpg)],
+      ["ACCESSORIES",   "$" + Math.round(s.accPerDev), colorFor("accPerDev", s.accPerDev, med.accPerDev)],
+      ["NPS",           fmtPct(s.nps),         colorFor("nps",       s.nps,       med.nps)]
     ];
-    return '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:14px;margin-bottom:12px">' +
-      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
-        '<td valign="middle"><div style="font-size:13px;font-weight:700;color:#0F1F46;text-transform:uppercase;letter-spacing:.04em">Store Performance · Today</div>' +
-        '<div style="font-size:11px;color:#64748B;margin-top:2px">' + esc(s.name) + (s.region ? ' &middot; ' + esc(s.region) : '') + '</div></td>' +
-        '<td valign="middle" align="right"><span style="display:inline-block;background:#0F1F46;color:#FFFFFF;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700">National #' + Math.round(s.rank) + '</span></td>' +
-      '</tr></table>' +
-      cellsRow(cells) +
+    const metricRows = [];
+    for(let i = 0; i < metricCells.length; i += 3){
+      const trio = metricCells.slice(i, i + 3).map(([l, v, c]) => tileTd(l, v, c, 33));
+      while(trio.length < 3) trio.push('<td width="33%" style="padding:3px"></td>');
+      metricRows.push('<tr>' + trio.join("") + '</tr>');
+    }
+    const metricGrid = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:4px">' + metricRows.join("") + '</table>';
+
+    return '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;overflow:hidden;margin-bottom:12px">' +
+      '<div style="background:#0F1F46;background-image:linear-gradient(135deg,#0F1F46 0%,#1E3A8A 100%);color:#FFFFFF;padding:14px 16px;font-family:Helvetica,Arial,sans-serif">' +
+        '<div style="display:inline-block;background:#F97316;color:#FFFFFF;font-size:10px;font-weight:800;letter-spacing:.04em;padding:3px 10px;border-radius:6px;margin-bottom:6px">RANK #' + Math.round(s.rank) + '</div>' +
+        '<div style="font-size:22px;font-weight:700;line-height:1.1;margin-bottom:4px">' + esc(s.name) + '</div>' +
+        (subBits.length ? '<div style="font-size:11px;color:#BFDBFE;margin-bottom:8px">' + esc(subBits.join(" · ")) + '</div>' : '') +
+        '<div style="font-size:26px;font-weight:800;color:#F97316;line-height:1">' + esc(fmtDollars(s.gpTrend)) +
+          '<span style="font-size:10px;color:#FFFFFF;opacity:.7;letter-spacing:.06em;font-weight:600;margin-left:4px">GP TREND</span>' +
+        '</div>' +
+      '</div>' +
+      '<div style="padding:6px 10px 12px">' +
+        deviceRow + metricGrid +
+      '</div>' +
     '</div>';
   };
 
-  // Rep card: National Rank (colored) + Total Score (colored) + Est. Blended Wage (neutral).
-  const buildRepCard = (r, med) => {
-    const cells = [
-      cellHtml("Nat'l Rank",        fmtRank(r.rank),                  colorFor("rank",       r.rank,       med.rank)),
-      cellHtml("Total Score",       fmtInt(r.totalScore),             colorFor("totalScore", r.totalScore, med.totalScore)),
-      cellHtml("Est. Blended Wage", fmtDollars2(r.blendedWage) + "/hr","neutral")
-    ];
-    return '<div style="background:#FFFFFF;border:1px solid #E2E8F0;border-radius:12px;padding:14px;margin-bottom:10px">' +
-      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0"><tr>' +
-        '<td valign="middle"><div style="font-size:13px;font-weight:700;color:#0F1F46">' + esc(r.name || "Unnamed") + '</div>' +
-        '<div style="font-size:11px;color:#64748B;margin-top:2px">' + esc(r.title || "Rep") + (r.dm ? ' &middot; DM ' + esc(r.dm) : '') + '</div></td>' +
-        '<td valign="middle" align="right"><span style="display:inline-block;background:#0F1F46;color:#FFFFFF;border-radius:999px;padding:4px 12px;font-size:11px;font-weight:700">National #' + Math.round(r.rank) + '</span></td>' +
-      '</tr></table>' +
-      cellsRow(cells) +
-    '</div>';
-  };
-
+  // Rep table: single-line rows for each rep. Compact font to fit 600px email.
   const buildRepPerfBlock = () => {
     if(!perf || !perf.reps || !perf.reps.length) return "";
     const med = perf.repMedians || {};
-    const cards = perf.reps.map(r => buildRepCard(r, med)).join("");
-    return '<div style="font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin:6px 0 8px">' +
-      'Reps at this store (' + perf.reps.length + ') &middot; green = top 50% of all reps, red = bottom 50%' +
-    '</div>' + cards;
+    const colorVal = (field, val, formatted) => {
+      const cls = colorFor(field, val, med[field]);
+      const color = palettes[cls].val;
+      return '<td style="padding:6px;font-family:Helvetica,Arial,sans-serif;font-size:12px;font-weight:700;color:' + color + ';white-space:nowrap">' + esc(formatted) + '</td>';
+    };
+    const plain = (val, opts) => {
+      opts = opts || {};
+      return '<td style="padding:6px;font-family:Helvetica,Arial,sans-serif;font-size:12px;font-weight:' + (opts.bold ? 700 : 600) + ';color:' + (opts.color || "#1E293B") + ';white-space:nowrap' + (opts.align ? ';text-align:' + opts.align : '') + '">' + esc(val) + '</td>';
+    };
+    const rows = perf.reps.map(r =>
+      '<tr style="border-top:1px solid #F1F5F9">' +
+        plain(fmtRank(r.rank),   {color: "#1D4ED8", bold: true}) +
+        plain(r.name || "—",     {color: "#0F1F46", bold: true}) +
+        colorVal("gp",      r.gp,      fmtDollars(r.gp)) +
+        colorVal("plusMix", r.plusMix, fmtPct(r.plusMix)) +
+        colorVal("gigPct",  r.gigPct,  fmtPct(r.gigPct)) +
+        plain(fmtInt(r.mobile)) +
+        plain(fmtInt(r.tabletMTD)) +
+        plain(fmtInt(r.watchMTD)) +
+        plain(fmtDollars2(r.blendedWage), {align: "right"}) +
+      '</tr>'
+    ).join("");
+    const headers = ["NAT'L #","REP NAME","GP $","PLUS %","GIG %","XM","TAB","WATCH","EST. WAGE"]
+      .map((label, i) => '<th style="padding:7px 6px;font-family:Helvetica,Arial,sans-serif;font-size:9px;font-weight:700;color:#FFFFFF;text-transform:uppercase;letter-spacing:.04em;text-align:' + (i === 8 ? "right" : "left") + ';white-space:nowrap">' + label + '</th>').join("");
+    return '<div style="font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin:6px 0 6px">' +
+      'Team Members (' + perf.reps.length + ') &middot; GP $ / Plus % / Gig % colored green = top 50% of all reps, red = bottom 50%' +
+    '</div>' +
+    '<div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden">' +
+      '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;background:#fff">' +
+        '<thead><tr style="background:#0F1F46">' + headers + '</tr></thead>' +
+        '<tbody>' + rows + '</tbody>' +
+      '</table>' +
+    '</div>';
   };
 
   const buildPerfSection = () => {
@@ -1705,7 +1876,7 @@ function buildEmailHtml(p){
     return sectionHeader("📊", "Today's Performance Snapshot") +
       buildStorePerfBlock() +
       buildRepPerfBlock() +
-      (perf.pulledAt ? '<div style="font-size:10px;color:#94A3B8;font-style:italic;margin-top:4px">Source: Sales Report.xlsx &middot; pulled ' + esc(new Date(perf.pulledAt).toLocaleString()) + '</div>' : '');
+      (perf.pulledAt ? '<div style="font-size:10px;color:#94A3B8;font-style:italic;margin-top:6px">Source: Sales Report.xlsx &middot; pulled ' + esc(new Date(perf.pulledAt).toLocaleString()) + '</div>' : '');
   };
 
   return (
