@@ -897,6 +897,19 @@ async function loadSalesReport(){
     salesData.reps   = parseRepRank(wb, salesData.stores.map(s => (s.name || "").toLowerCase()));
     // Wait for t-sheets to finish too so the snapshot has both data sources.
     await tSheetsPromise;
+    // Decorate every store + rep with its MTD t-chart count so on-screen
+    // renderers and the payload snapshot both see the same shape. Sales
+    // report uses short store names ("Cicero"); t-sheet endpoint uses full
+    // display names ("Cicero Xfinity Store"), so we append the suffix when
+    // looking up by store.
+    salesData.stores.forEach(s => {
+      const fullName = s.name + " Xfinity Store";
+      s.tCharts = salesData.tChartsByStore[fullName] || 0;
+    });
+    salesData.reps.forEach(r => {
+      const key = r.name + "||" + (r.store || "").toLowerCase();
+      r.tCharts = salesData.tChartsByRep[key] || 0;
+    });
     salesData.loadedAt = new Date();
     salesData.state    = "ready";
     return salesData;
@@ -1284,38 +1297,21 @@ function renderRepTable(reps, med){
 
 /* Build a snapshot object suitable for embedding in the Zapier payload + email.
    Returns null if sales data hasn't been loaded yet or this store wasn't found.
-   T-chart MTD counts are merged onto the store + each rep so the renderers can
-   stay dumb. */
+   T-chart counts are already attached to each store + rep object by
+   loadSalesReport, so renderers and this snapshot see the same shape. */
 function getStorePerformanceSnapshot(displayStoreName){
   if(salesData.state !== "ready") return null;
   const short = toSalesStoreName(displayStoreName).toLowerCase();
-  let store = salesData.stores.find(s => (s.name || "").toLowerCase() === short);
-  let reps  = salesData.reps.filter(r => (r.store || "").toLowerCase() === short)
-                            .sort((a, b) => a.rank - b.rank);
+  const store = salesData.stores.find(s => (s.name || "").toLowerCase() === short) || null;
+  const reps  = salesData.reps.filter(r => (r.store || "").toLowerCase() === short)
+                              .sort((a, b) => a.rank - b.rank);
   if(!store && !reps.length) return null;
-  // Merge in MTD t-chart counts (store keyed by full display name, reps by
-  // `${rep_name}||${short_store_name}`).
-  if(store){
-    store = Object.assign({}, store, {
-      tCharts: salesData.tChartsByStore[displayStoreName] || 0
-    });
-  }
-  reps = reps.map(r => Object.assign({}, r, {
-    tCharts: salesData.tChartsByRep[r.name + "||" + (r.store || "").toLowerCase()] || 0
-  }));
-  // Per-rep medians for coloring (only includes the per-rep t-charts of the
-  // current RSD, computed on-the-fly so the median reflects all reps the DM
-  // has visibility into).
-  const allRepsWithTCharts = salesData.reps.map(r => ({
-    ...r,
-    tCharts: salesData.tChartsByRep[r.name + "||" + (r.store || "").toLowerCase()] || 0
-  }));
   return {
     pulledAt:     salesData.loadedAt ? salesData.loadedAt.toISOString() : null,
-    store:        store || null,
+    store:        store,
     reps:         reps,
     storeMedians: buildStoreMedians(salesData.stores),
-    repMedians:   buildRepMedians(allRepsWithTCharts)
+    repMedians:   buildRepMedians(salesData.reps)
   };
 }
 
