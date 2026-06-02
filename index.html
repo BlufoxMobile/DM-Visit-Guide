@@ -144,7 +144,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 .perf-store-gp-lbl{font-size:10px;color:#fff;opacity:.7;letter-spacing:.06em;font-weight:600;margin-left:4px}
 
 /* ----- Tile rows (device totals + metric grid) ----- */
-.perf-tiles-row{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;padding:10px 10px 6px}
+.perf-tiles-row{display:grid;grid-template-columns:repeat(5,1fr);gap:6px;padding:10px 10px 6px}
 .perf-tiles-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:6px 10px 12px}
 .perf-tile{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:8px 10px;text-align:left;min-width:0}
 .perf-tile-label{font-size:9px;color:#64748B;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin-bottom:4px;line-height:1.1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -157,7 +157,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
 /* ----- Rep table ----- */
 .perf-table-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border:1px solid var(--border);border-radius:10px;background:#fff;box-shadow:0 1px 2px rgba(15,31,70,.04)}
-.perf-table{width:100%;border-collapse:collapse;font-size:12px;min-width:560px}
+.perf-table{width:100%;border-collapse:collapse;font-size:12px;min-width:640px}
 .perf-table thead{background:#0F1F46;color:#fff}
 .perf-table th{padding:8px 6px;text-align:left;font-size:10px;text-transform:uppercase;letter-spacing:.04em;font-weight:700;white-space:nowrap}
 .perf-table th:first-child{padding-left:12px}
@@ -180,12 +180,12 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 @media (max-width: 480px){
   .perf-store-name{font-size:18px}
   .perf-store-gp{font-size:22px}
-  .perf-tiles-row{grid-template-columns:repeat(4,1fr);gap:4px;padding:8px 8px 4px}
+  .perf-tiles-row{grid-template-columns:repeat(5,1fr);gap:4px;padding:8px 8px 4px}
   .perf-tiles-grid{grid-template-columns:repeat(3,1fr);gap:4px;padding:4px 8px 10px}
   .perf-tile{padding:6px 8px}
   .perf-tile-val{font-size:15px}
   .perf-tile-label{font-size:8px}
-  .perf-table{font-size:11px;min-width:560px}
+  .perf-table{font-size:11px;min-width:640px}
 }
 
 /* Submit area */
@@ -472,7 +472,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
   </form>
 
-  <div class="foot">DM Store Visit Guide · v1.15</div>
+  <div class="foot">DM Store Visit Guide · v1.16</div>
 </div>
 
 <script>
@@ -490,6 +490,11 @@ const CONFIG = {
   // We pull it on demand when a DM picks a store and surface today's snapshot.
   SALES_REPORT_URL: "https://raw.githubusercontent.com/BlufoxMobile/Daily-Sales-Report/main/data/Sales%20Report.xlsx",
   SALES_RSD_FILTER: "Bilbrey",   // only show stores under this RSD (matches Daily-Sales-Report dashboard)
+
+  // T-Sheet Submissions — same Apps Script endpoint the T-Sheet-Submissions
+  // dashboard uses. Returns {success, submissions: [{timestamp, store, rep_name, ...}]}.
+  // We filter to month-to-date and aggregate counts by store and by rep.
+  TSHEET_URL: "https://script.google.com/macros/s/AKfycbyQaa1yvggLJuw5dcme74vwAW3hSB3BvzCK40IhLThy-F8KZDFOF6gcyl8psNMd3yD-Cg/exec",
 
   // Image compression to keep webhook payload manageable.
   // 800px @ 0.68 looks crisp inline in email and keeps a 16-photo submission
@@ -845,6 +850,12 @@ const salesData = {
   state: "idle",              // idle | loading | ready | error
   stores: [],                 // array of {rank,name,gp,...}
   reps:   [],                 // array of {rank,name,store,gp,...}
+  // MTD t-chart submission counts, keyed by full store display name
+  // (e.g. "Greeneville Xfinity Store") for stores and by
+  // `${rep_name}||${short_store_name}` for reps.
+  tChartsByStore: {},
+  tChartsByRep:   {},
+  tChartTotal:    0,
   error:  null,
   loadedAt: null,
   _promise: null              // in-flight load promise (de-dupe)
@@ -872,6 +883,11 @@ async function loadSalesReport(){
     }
     if(typeof XLSX === "undefined") throw new Error("SheetJS failed to load");
 
+    // Kick off the t-sheet fetch in parallel — it's independent of the sales
+    // report and a failure here shouldn't block the perf panel from rendering.
+    const tSheetsPromise = loadTSheetsMTD()
+      .catch(err => { console.warn("t-sheets fetch failed:", err); return null; });
+
     const resp = await fetch(CONFIG.SALES_REPORT_URL + "?_=" + Date.now(), { cache: "no-store" });
     if(!resp.ok) throw new Error("Sales report HTTP " + resp.status);
     const buf = await resp.arrayBuffer();
@@ -879,6 +895,8 @@ async function loadSalesReport(){
 
     salesData.stores = parseStoreRank(wb);
     salesData.reps   = parseRepRank(wb, salesData.stores.map(s => (s.name || "").toLowerCase()));
+    // Wait for t-sheets to finish too so the snapshot has both data sources.
+    await tSheetsPromise;
     salesData.loadedAt = new Date();
     salesData.state    = "ready";
     return salesData;
@@ -889,6 +907,47 @@ async function loadSalesReport(){
     throw err;
   });
   return salesData._promise;
+}
+
+/* Fetch the T-Sheet Submissions feed and aggregate MTD counts. Populates:
+     salesData.tChartsByStore  — full store name → count (e.g. "Greeneville Xfinity Store": 29)
+     salesData.tChartsByRep    — `${rep_name}||${short_store_name}` → count
+     salesData.tChartTotal     — total MTD submissions across the whole company
+   This is best-effort: callers swallow errors so a t-sheet outage doesn't
+   block the sales-report-driven panels from rendering. */
+async function loadTSheetsMTD(){
+  const resp = await fetch(CONFIG.TSHEET_URL + "?_=" + Date.now(), { cache: "no-store" });
+  if(!resp.ok) throw new Error("T-Sheet HTTP " + resp.status);
+  const data = await resp.json();
+  if(!data || !data.success || !Array.isArray(data.submissions)){
+    throw new Error("T-Sheet payload missing 'submissions'");
+  }
+  // Filter to the current calendar month in the *user's* local time, which
+  // is what the dashboard shows.
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0).getTime();
+  const byStore = {};
+  const byRep   = {};
+  let total = 0;
+  for(const s of data.submissions){
+    const ts = Date.parse(s.timestamp);
+    if(!isFinite(ts) || ts < startOfMonth) continue;
+    total++;
+    const storeName = s.store || "";
+    if(storeName){
+      byStore[storeName] = (byStore[storeName] || 0) + 1;
+    }
+    const repName  = s.rep_name || "";
+    const shortName = toSalesStoreName(storeName).toLowerCase();
+    if(repName){
+      const key = repName + "||" + shortName;
+      byRep[key] = (byRep[key] || 0) + 1;
+    }
+  }
+  salesData.tChartsByStore = byStore;
+  salesData.tChartsByRep   = byRep;
+  salesData.tChartTotal    = total;
+  return { byStore, byRep, total };
 }
 
 // Find header row by looking for a row containing "Rank". Returns index or -1.
@@ -1070,7 +1129,8 @@ function buildRepMedians(reps){
   return {
     gp:      median(reps.map(r => r.gp)),
     plusMix: median(reps.map(r => r.plusMix)),
-    gigPct:  median(reps.map(r => r.gigPct))
+    gigPct:  median(reps.map(r => r.gigPct)),
+    tCharts: median(reps.map(r => r.tCharts || 0))
   };
 }
 
@@ -1160,6 +1220,7 @@ function renderStoreCard(s, med){
         tile("MOBILE",    fmt.int(s.mobileMTD)) +
         tile("TABLET",    fmt.int(s.tabletMTD)) +
         tile("WATCHES",   fmt.int(s.watchMTD)) +
+        tile("T-CHARTS",  fmt.int(s.tCharts || 0)) +
       '</div>' +
       '<div class="perf-tiles-grid">' +
         metric("GP TREND",       fmt.dollars(s.gpTrend), "gpTrend",   s.gpTrend) +
@@ -1192,11 +1253,12 @@ function renderRepTable(reps, med){
       '<td class="perf-num">' + escapeHTML(fmt.int(r.mobile))    + '</td>' +
       '<td class="perf-num">' + escapeHTML(fmt.int(r.tabletMTD)) + '</td>' +
       '<td class="perf-num">' + escapeHTML(fmt.int(r.watchMTD))  + '</td>' +
+      '<td class="' + cls("tCharts", r.tCharts || 0) + '">' + escapeHTML(fmt.int(r.tCharts || 0)) + '</td>' +
       '<td class="perf-num">' + escapeHTML(fmt.dollars2(r.blendedWage)) + '</td>' +
     '</tr>'
   )).join("");
   return (
-    '<div class="perf-section-label">Team Members (' + reps.length + ') — GP $ / Plus % / Gig % colored green = top 50% of all reps, red = bottom 50%</div>' +
+    '<div class="perf-section-label">Team Members (' + reps.length + ') — GP $ / Plus % / Gig % / T-Charts colored green = top 50% of all reps, red = bottom 50%</div>' +
     '<div class="perf-table-wrap">' +
       '<table class="perf-table">' +
         '<thead><tr>' +
@@ -1208,6 +1270,7 @@ function renderRepTable(reps, med){
           '<th>XM</th>' +
           '<th>TAB</th>' +
           '<th>WATCH</th>' +
+          '<th>T-CHARTS</th>' +
           '<th>EST. WAGE</th>' +
         '</tr></thead>' +
         '<tbody>' + rows + '</tbody>' +
@@ -1220,20 +1283,39 @@ function renderRepTable(reps, med){
 }
 
 /* Build a snapshot object suitable for embedding in the Zapier payload + email.
-   Returns null if sales data hasn't been loaded yet or this store wasn't found. */
+   Returns null if sales data hasn't been loaded yet or this store wasn't found.
+   T-chart MTD counts are merged onto the store + each rep so the renderers can
+   stay dumb. */
 function getStorePerformanceSnapshot(displayStoreName){
   if(salesData.state !== "ready") return null;
   const short = toSalesStoreName(displayStoreName).toLowerCase();
-  const store = salesData.stores.find(s => (s.name || "").toLowerCase() === short);
-  const reps  = salesData.reps.filter(r => (r.store || "").toLowerCase() === short)
-                              .sort((a, b) => a.rank - b.rank);
+  let store = salesData.stores.find(s => (s.name || "").toLowerCase() === short);
+  let reps  = salesData.reps.filter(r => (r.store || "").toLowerCase() === short)
+                            .sort((a, b) => a.rank - b.rank);
   if(!store && !reps.length) return null;
+  // Merge in MTD t-chart counts (store keyed by full display name, reps by
+  // `${rep_name}||${short_store_name}`).
+  if(store){
+    store = Object.assign({}, store, {
+      tCharts: salesData.tChartsByStore[displayStoreName] || 0
+    });
+  }
+  reps = reps.map(r => Object.assign({}, r, {
+    tCharts: salesData.tChartsByRep[r.name + "||" + (r.store || "").toLowerCase()] || 0
+  }));
+  // Per-rep medians for coloring (only includes the per-rep t-charts of the
+  // current RSD, computed on-the-fly so the median reflects all reps the DM
+  // has visibility into).
+  const allRepsWithTCharts = salesData.reps.map(r => ({
+    ...r,
+    tCharts: salesData.tChartsByRep[r.name + "||" + (r.store || "").toLowerCase()] || 0
+  }));
   return {
     pulledAt:     salesData.loadedAt ? salesData.loadedAt.toISOString() : null,
     store:        store || null,
     reps:         reps,
     storeMedians: buildStoreMedians(salesData.stores),
-    repMedians:   buildRepMedians(salesData.reps)
+    repMedians:   buildRepMedians(allRepsWithTCharts)
   };
 }
 
@@ -1646,7 +1728,7 @@ function buildPayload(){
 
   const payload = {
     submittedAt: new Date().toISOString(),
-    formVersion: "1.15",
+    formVersion: "1.16",
 
     // ----- routing fields (auto-populated from store directory; used by Zapier email step) -----
     store:             store,
@@ -1795,10 +1877,11 @@ function buildEmailHtml(p){
     const med = perf.storeMedians || {};
     const subBits = [s.region, s.sm ? "SM: " + s.sm : null, s.dm ? "DM: " + s.dm : null].filter(Boolean);
     const deviceRow = '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="margin-top:8px"><tr>' +
-      tileTd("TOTAL RGU", fmtInt(s.newRGU),    "neutral", 25) +
-      tileTd("MOBILE",    fmtInt(s.mobileMTD), "neutral", 25) +
-      tileTd("TABLET",    fmtInt(s.tabletMTD), "neutral", 25) +
-      tileTd("WATCHES",   fmtInt(s.watchMTD),  "neutral", 25) +
+      tileTd("TOTAL RGU", fmtInt(s.newRGU),       "neutral", 20) +
+      tileTd("MOBILE",    fmtInt(s.mobileMTD),    "neutral", 20) +
+      tileTd("TABLET",    fmtInt(s.tabletMTD),    "neutral", 20) +
+      tileTd("WATCHES",   fmtInt(s.watchMTD),     "neutral", 20) +
+      tileTd("T-CHARTS",  fmtInt(s.tCharts || 0), "neutral", 20) +
     '</tr></table>';
     const metricCells = [
       ["GP TREND",      fmtDollars(s.gpTrend), colorFor("gpTrend",   s.gpTrend,   med.gpTrend)],
@@ -1857,13 +1940,14 @@ function buildEmailHtml(p){
         plain(fmtInt(r.mobile)) +
         plain(fmtInt(r.tabletMTD)) +
         plain(fmtInt(r.watchMTD)) +
+        colorVal("tCharts", r.tCharts || 0, fmtInt(r.tCharts || 0)) +
         plain(fmtDollars2(r.blendedWage), {align: "right"}) +
       '</tr>'
     ).join("");
-    const headers = ["NAT'L #","REP NAME","GP $","PLUS %","GIG %","XM","TAB","WATCH","EST. WAGE"]
-      .map((label, i) => '<th style="padding:7px 6px;font-family:Helvetica,Arial,sans-serif;font-size:9px;font-weight:700;color:#FFFFFF;text-transform:uppercase;letter-spacing:.04em;text-align:' + (i === 8 ? "right" : "left") + ';white-space:nowrap">' + label + '</th>').join("");
+    const headers = ["NAT'L #","REP NAME","GP $","PLUS %","GIG %","XM","TAB","WATCH","T-CHARTS","EST. WAGE"]
+      .map((label, i, arr) => '<th style="padding:7px 6px;font-family:Helvetica,Arial,sans-serif;font-size:9px;font-weight:700;color:#FFFFFF;text-transform:uppercase;letter-spacing:.04em;text-align:' + (i === arr.length - 1 ? "right" : "left") + ';white-space:nowrap">' + label + '</th>').join("");
     return '<div style="font-size:11px;color:#64748B;text-transform:uppercase;letter-spacing:.06em;font-weight:700;margin:6px 0 6px">' +
-      'Team Members (' + perf.reps.length + ') &middot; GP $ / Plus % / Gig % colored green = top 50% of all reps, red = bottom 50%' +
+      'Team Members (' + perf.reps.length + ') &middot; GP $ / Plus % / Gig % / T-Charts colored green = top 50% of all reps, red = bottom 50%' +
     '</div>' +
     '<div style="border:1px solid #E2E8F0;border-radius:10px;overflow:hidden">' +
       '<table role="presentation" width="100%" cellpadding="0" cellspacing="0" border="0" style="border-collapse:collapse;background:#fff">' +
