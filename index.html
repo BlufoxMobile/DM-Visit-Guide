@@ -1724,6 +1724,7 @@ function buildPayload(){
   const storeManagerEmail = directory.storeManagers[store]     || "";
   const storeManagerName  = directory.storeManagerNames[store] || "";
   const storeDMEmail      = directory.storeDMs[store]          || "";
+  const storeASMEmail     = (directory.storeAMs || {})[store]   || "";
 
   const photoSummary = {};
   Object.keys(filesBucket).forEach(k => {
@@ -1738,6 +1739,7 @@ function buildPayload(){
     store:             store,
     storeManagerName:  storeManagerName,
     storeManagerEmail: storeManagerEmail,
+    storeASMEmail:     storeASMEmail,
     storeDMEmail:      storeDMEmail,
 
     // ----- visit info (auto-set to today) -----
