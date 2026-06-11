@@ -996,14 +996,19 @@ function parseStoreRank(wb){
   const iRSD         = hi(h, "rsd");
   const iDM          = h.findIndex(c => c.trim().toLowerCase() === "dm");
   const iSM          = h.findIndex(c => c.trim().toLowerCase() === "sm");
-  // "GP $ Trend" — projected GP for the month
-  const iGPTrend     = h.findIndex(c => /^GP\s*\$\s*Trend$/i.test(c));
-  // "Mobile Close rate" (the dashboard's "MOB CLOSE RATE")
-  const iMobCR       = h.findIndex(c => /^Mobile\s*Close\s*rate$/i.test(c));
-  // "Fiscal Close Rate" (the dashboard's "FISCAL CR")
-  const iFiscalCR    = h.findIndex(c => /^Fiscal\s*Close\s*Rate$/i.test(c));
-  // "Non Traditional CR" — non-traditional close rate
-  const iNonTrad     = h.findIndex(c => /^Non\s*Traditional\s*CR$/i.test(c));
+  // Header note: the spreadsheet appends point-value suffixes (e.g. "\r\n25 Pts")
+  // to columns that feed into Total Score, and those suffixes get added/removed
+  // over time. Match by prefix only (no $ anchor) so we keep working when the
+  // suffix changes. findIndex returns the first hit, which is consistently the
+  // current-month column (Last Month / prior-period columns are prefixed with
+  // "Last Month").
+  const iGPTrend     = h.findIndex(c => /^GP\s*\$\s*Trend/i.test(c));
+  // "Mobile Close rate" (with or without "\r\n25 Pts" suffix) — dashboard's "MOB CLOSE RATE"
+  const iMobCR       = h.findIndex(c => /^Mobile\s*Close\s*rate/i.test(c));
+  // "Fiscal Close Rate" — dashboard's "FISCAL CR"
+  const iFiscalCR    = h.findIndex(c => /^Fiscal\s*Close\s*Rate/i.test(c));
+  // "Non Traditional CR" (with or without "\r\n10 Pts" suffix)
+  const iNonTrad     = h.findIndex(c => /^Non\s*Traditional\s*CR/i.test(c));
   // "GIG Plans (≥180+ commissions plan) %\r\n10 Pts" — gig plan attach %
   // (`.` doesn't cross newlines in JS regex without the `s` flag, hence [\s\S]*)
   const iGigPct      = h.findIndex(c => /^GIG\s*Plans[\s\S]*%[\s\S]*10\s*Pts/i.test(c));
@@ -1013,13 +1018,15 @@ function parseStoreRank(wb){
   const iNewToUpg    = h.findIndex(c => /NEW\s*TO\s*UPGR\s*%/i.test(c));
   // "Accessory $ per Device (Net) 10 Pts" — net acc dollars per device sold
   const iAccPerDev   = h.findIndex(c => /Accessory.*per\s*Device.*Net/i.test(c));
-  // "Fiscal NPS"
-  const iNPS         = h.findIndex(c => /^Fiscal\s*NPS$/i.test(c));
-  // "NEW RGU" — the dashboard's "TOTAL RGU" tile (not the "NEW RGU Trend" col)
-  const iNewRGU      = h.findIndex(c => /^NEW\s*RGU$/i.test(c));
-  const iMobileMTD   = h.findIndex(c => /^Mobile\s*MTD$/i.test(c));
-  const iTabletMTD   = h.findIndex(c => /^Tablet\s*MTD$/i.test(c));
-  const iWatchMTD    = h.findIndex(c => /^Watches\s*MTD$/i.test(c));
+  // "Fiscal NPS" (with or without "\r\n15 Pts" suffix)
+  const iNPS         = h.findIndex(c => /^Fiscal\s*NPS/i.test(c));
+  // "NEW RGU" — dashboard's "TOTAL RGU" tile. Note: the spreadsheet also has
+  // "NEW RGU Trend" and "Last Month NEW RGU"; findIndex picks "NEW RGU" first
+  // since it appears before "NEW RGU Trend".
+  const iNewRGU      = h.findIndex(c => /^NEW\s*RGU(?!\s*Trend)/i.test(c));
+  const iMobileMTD   = h.findIndex(c => /^Mobile\s*MTD/i.test(c));
+  const iTabletMTD   = h.findIndex(c => /^Tablet\s*MTD/i.test(c));
+  const iWatchMTD    = h.findIndex(c => /^Watches\s*MTD/i.test(c));
   const iTotalScore  = h.findIndex(c => /^total\s*score/i.test(c));
 
   const out = [];
@@ -1069,15 +1076,16 @@ function parseRepRank(wb, allowedStoresLower){
   const iDM     = h.findIndex(c => c.trim().toLowerCase() === "dm");
   // "GP $\r\n25 Pts" — gross profit dollars
   const iGP          = h.findIndex(c => /^GP\s*\$/i.test(c));
-  // "Mobile Plus Mix (%)\r\n5 Pts" — Plus attach (`.` doesn't cross newlines,
-  // so use [\s\S]* for the `\r\n` gap between "%)" and "5 Pts")
-  const iPlusMix     = h.findIndex(c => /Mobile\s*Plus\s*Mix[\s\S]*5\s*Pts/i.test(c));
-  // "GIG Plans (≥180+ commissions plan) %" — gig attach (ends with %, no Pts)
-  const iGigPct      = h.findIndex(c => /^GIG\s*Plans[\s\S]*commissions\s*plan\)\s*%$/i.test(c));
-  // Device counts
-  const iMobile      = h.findIndex(c => /^Mobile\s*MTD$/i.test(c));
-  const iTabletMTD   = h.findIndex(c => /^Tablet\s*MTD$/i.test(c));
-  const iWatchMTD    = h.findIndex(c => /^Watches\s*MTD$/i.test(c));
+  // "Mobile Plus Mix (%)\r\n5 Pts" — Plus attach. Match Mobile Plus Mix as prefix
+  // (suffix may or may not be present).
+  const iPlusMix     = h.findIndex(c => /^Mobile\s*Plus\s*Mix/i.test(c));
+  // "GIG Plans (≥180+ commissions plan) %" — gig attach. Drop the strict $
+  // anchor so the column still matches if a "X Pts" suffix gets appended later.
+  const iGigPct      = h.findIndex(c => /^GIG\s*Plans[\s\S]*commissions\s*plan\)\s*%/i.test(c));
+  // Device counts (prefix-match, suffix tolerant)
+  const iMobile      = h.findIndex(c => /^Mobile\s*MTD/i.test(c));
+  const iTabletMTD   = h.findIndex(c => /^Tablet\s*MTD/i.test(c));
+  const iWatchMTD    = h.findIndex(c => /^Watches\s*MTD/i.test(c));
   // Blended Wage (the column header is literally "Blended Wage\r\nESTIMATE ONLY")
   const iBlendedWage = h.findIndex(c => /blended\s*wage/i.test(c));
   const iTotalScore  = h.findIndex(c => /^total\s*score/i.test(c));
