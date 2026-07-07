@@ -472,7 +472,7 @@ input.invalid,select.invalid,textarea.invalid{border-color:var(--error);box-shad
 
   </form>
 
-  <div class="foot">DM Store Visit Guide · v1.16</div>
+  <div class="foot">DM Store Visit Guide · v1.17</div>
 </div>
 
 <script>
@@ -497,15 +497,15 @@ const CONFIG = {
   TSHEET_URL: "https://script.google.com/macros/s/AKfycbyQaa1yvggLJuw5dcme74vwAW3hSB3BvzCK40IhLThy-F8KZDFOF6gcyl8psNMd3yD-Cg/exec",
 
   // Image compression to keep webhook payload manageable.
-  // 800px @ 0.68 looks crisp inline in email and keeps a 16-photo submission
-  // comfortably under Zapier's request-size limit.
-  IMG_MAX_DIMENSION: 800,    // px — longest edge after resize
-  IMG_QUALITY:       0.68,   // 0–1 JPEG quality
+  // 1600px @ 0.85 gives high-resolution, zoomable photos in the email
+  // (matches the Monday Ops Checklist app) while staying under Zapier's limit.
+  IMG_MAX_DIMENSION: 1600,   // px — longest edge after resize
+  IMG_QUALITY:       0.85,   // 0–1 JPEG quality
 
   // Hard ceiling on POST body size (JSON-stringified). Zapier catch hooks
-  // reject anything north of ~6 MB with HTTP 413, so we shrink photos
-  // automatically if the assembled payload would push past this.
-  MAX_PAYLOAD_BYTES: 4500000, // ~4.5 MB
+  // reject anything north of ~6 MB with HTTP 413, so cap at 5.8 MB and shrink
+  // photos automatically if the assembled payload would push past this.
+  MAX_PAYLOAD_BYTES: 5800000, // ~5.8 MB
 
   // Cap per uploader. Keeps webhook payload bounded (max 7 × 4 = 28 photos)
   // and keeps the email body clean (each section renders as a tidy 2×2 grid).
@@ -1499,9 +1499,9 @@ function compressImage(file){
         // Try progressively smaller sizes if a larger one fails (iOS Safari).
         const attempts = [
           { max: CONFIG.IMG_MAX_DIMENSION, q: CONFIG.IMG_QUALITY },
-          { max: 640,                      q: 0.62 },
-          { max: 520,                      q: 0.58 },
-          { max: 400,                      q: 0.55 }
+          { max: 1280,                     q: 0.8  },
+          { max: 1024,                     q: 0.75 },
+          { max: 800,                      q: 0.68 }
         ];
         let lastErr = null;
         for(const a of attempts){
@@ -1648,9 +1648,10 @@ function wireSubmit(){
       // ceiling, shrink everything and try again. Stops the user from getting
       // a confusing "Submission failed: HTTP 413" error.
       const SHRINK_LEVELS = [
-        { max: 640, q: 0.62, label: "smaller" },
-        { max: 520, q: 0.58, label: "smaller still" },
-        { max: 400, q: 0.55, label: "much smaller" }
+        { max: 1280, q: 0.8,  label: "slightly smaller" },
+        { max: 1024, q: 0.72, label: "smaller" },
+        { max: 800,  q: 0.68, label: "smaller still" },
+        { max: 640,  q: 0.62, label: "much smaller" }
       ];
       let level = 0;
       while(body.length > CONFIG.MAX_PAYLOAD_BYTES && level < SHRINK_LEVELS.length){
@@ -1733,7 +1734,7 @@ function buildPayload(){
 
   const payload = {
     submittedAt: new Date().toISOString(),
-    formVersion: "1.16",
+    formVersion: "1.17",
 
     // ----- routing fields (auto-populated from store directory; used by Zapier email step) -----
     store:             store,
@@ -1814,7 +1815,7 @@ function buildEmailHtml(p){
     if(!photos || !photos.length) return "";
     const cells = photos.map(ph =>
       '<td width="50%" style="padding:4px;vertical-align:top">' +
-      '<img src="' + ph.dataUrl + '" alt="' + esc(alt) + '" style="width:100%;max-width:262px;height:auto;display:block;border-radius:8px;border:1px solid #e2e8f0">' +
+      '<img src="' + ph.dataUrl + '" alt="' + esc(alt) + '" style="width:100%;max-width:100%;height:auto;display:block;border-radius:8px;border:1px solid #e2e8f0">' +
       '</td>');
     const rows = [];
     for(let i = 0; i < cells.length; i += 2){
